@@ -1,0 +1,2 @@
+(executables (names test_trace test_attach) (libraries probes_lib_test)
+ (preprocess (pps ppx_jane)))

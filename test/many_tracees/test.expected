@@ -1,0 +1,20 @@
+0:prog1
+prog1 enabled
+0:prog2
+prog2 disabled
+Already attached to this process
+Already attached to another process
+detach failed: no pid
+
+prog1 enabled
+prog1 disabled
+prog1 enabled
+prog1 disabled
+prog1 enabled
+prog2 disabled
+prog2 enabled
+prog2 disabled
+Tracing test_prog1.exe with process id <pid> failed. Process <pid> killed with signal -7.
+
+Tracing test_prog2.exe with process id <pid> failed. Process <pid> killed with signal -7.
+

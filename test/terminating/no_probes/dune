@@ -1,0 +1,275 @@
+(rule (targets assorted_handlers_no_probes.ml)
+ (deps (:first_dep ../assorted_handlers.ml))
+ (action (bash "cp %{first_dep} %{targets}")))
+
+(rule (targets assorted_handlers_no_probes.output)
+ (deps ../../test_trace.exe assorted_handlers_no_probes.exe)
+ (action
+  (bash
+   "../../test_trace.exe assorted_handlers_no_probes.exe | sed 's/Bin_prefix_assorted_handlers_no_probes__//' > %{targets}")))
+
+(alias (name runtest)
+ (deps ../assorted_handlers_no_probes.expected
+  assorted_handlers_no_probes.output)
+ (action
+  (bash
+   "diff -u ../assorted_handlers_no_probes.expected assorted_handlers_no_probes.output")))
+
+(rule (targets backtrace_in_handler_no_probes.ml)
+ (deps (:first_dep ../backtrace_in_handler.ml))
+ (action (bash "cp %{first_dep} %{targets}")))
+
+(rule (targets backtrace_in_handler_no_probes.output)
+ (deps ../../test_trace.exe backtrace_in_handler_no_probes.exe)
+ (action
+  (bash
+   "../../test_trace.exe backtrace_in_handler_no_probes.exe | sed 's/Bin_prefix_assorted_handlers_no_probes__//' > %{targets}")))
+
+(alias (name runtest)
+ (deps ../backtrace_in_handler_no_probes.expected
+  backtrace_in_handler_no_probes.output)
+ (action
+  (bash
+   "diff -u ../backtrace_in_handler_no_probes.expected backtrace_in_handler_no_probes.output")))
+
+(rule (targets backtrace_in_handler_loop_no_probes.ml)
+ (deps (:first_dep ../backtrace_in_handler_loop.ml))
+ (action (bash "cp %{first_dep} %{targets}")))
+
+(rule (targets backtrace_in_handler_loop_no_probes.output)
+ (deps ../../test_trace.exe backtrace_in_handler_loop_no_probes.exe)
+ (action
+  (bash
+   "../../test_trace.exe backtrace_in_handler_loop_no_probes.exe | sed 's/Bin_prefix_assorted_handlers_no_probes__//' > %{targets}")))
+
+(alias (name runtest)
+ (deps ../backtrace_in_handler_loop_no_probes.expected
+  backtrace_in_handler_loop_no_probes.output)
+ (action
+  (bash
+   "diff -u ../backtrace_in_handler_loop_no_probes.expected backtrace_in_handler_loop_no_probes.output")))
+
+(rule (targets exception_in_handler_no_probes.ml)
+ (deps (:first_dep ../exception_in_handler.ml))
+ (action (bash "cp %{first_dep} %{targets}")))
+
+(rule (targets exception_in_handler_no_probes.output)
+ (deps ../../test_trace.exe exception_in_handler_no_probes.exe)
+ (action
+  (bash
+   "../../test_trace.exe exception_in_handler_no_probes.exe | sed 's/Bin_prefix_assorted_handlers_no_probes__//' > %{targets}")))
+
+(alias (name runtest)
+ (deps ../exception_in_handler_no_probes.expected
+  exception_in_handler_no_probes.output)
+ (action
+  (bash
+   "diff -u ../exception_in_handler_no_probes.expected exception_in_handler_no_probes.output")))
+
+(rule (targets gc_in_handler_no_probes.ml)
+ (deps (:first_dep ../gc_in_handler.ml))
+ (action (bash "cp %{first_dep} %{targets}")))
+
+(rule (targets gc_in_handler_no_probes.output)
+ (deps ../../test_trace.exe gc_in_handler_no_probes.exe)
+ (action
+  (bash
+   "../../test_trace.exe gc_in_handler_no_probes.exe | sed 's/Bin_prefix_assorted_handlers_no_probes__//' > %{targets}")))
+
+(alias (name runtest)
+ (deps ../gc_in_handler_no_probes.expected gc_in_handler_no_probes.output)
+ (action
+  (bash
+   "diff -u ../gc_in_handler_no_probes.expected gc_in_handler_no_probes.output")))
+
+(rule (targets gc_in_handler_deep_stack_no_probes.ml)
+ (deps (:first_dep ../gc_in_handler_deep_stack.ml))
+ (action (bash "cp %{first_dep} %{targets}")))
+
+(rule (targets gc_in_handler_deep_stack_no_probes.output)
+ (deps ../../test_trace.exe gc_in_handler_deep_stack_no_probes.exe)
+ (action
+  (bash
+   "../../test_trace.exe gc_in_handler_deep_stack_no_probes.exe | sed 's/Bin_prefix_assorted_handlers_no_probes__//' > %{targets}")))
+
+(alias (name runtest)
+ (deps ../gc_in_handler_deep_stack_no_probes.expected
+  gc_in_handler_deep_stack_no_probes.output)
+ (action
+  (bash
+   "diff -u ../gc_in_handler_deep_stack_no_probes.expected gc_in_handler_deep_stack_no_probes.output")))
+
+(rule (targets many_free_vars_in_handler_no_probes.ml)
+ (deps (:first_dep ../many_free_vars_in_handler.ml))
+ (action (bash "cp %{first_dep} %{targets}")))
+
+(rule (targets many_free_vars_in_handler_no_probes.output)
+ (deps ../../test_trace.exe many_free_vars_in_handler_no_probes.exe)
+ (action
+  (bash
+   "../../test_trace.exe many_free_vars_in_handler_no_probes.exe | sed 's/Bin_prefix_assorted_handlers_no_probes__//' > %{targets}")))
+
+(alias (name runtest)
+ (deps ../many_free_vars_in_handler_no_probes.expected
+  many_free_vars_in_handler_no_probes.output)
+ (action
+  (bash
+   "diff -u ../many_free_vars_in_handler_no_probes.expected many_free_vars_in_handler_no_probes.output")))
+
+(rule (targets printf_in_handler_no_probes.ml)
+ (deps (:first_dep ../printf_in_handler.ml))
+ (action (bash "cp %{first_dep} %{targets}")))
+
+(rule (targets printf_in_handler_no_probes.output)
+ (deps ../../test_trace.exe printf_in_handler_no_probes.exe)
+ (action
+  (bash
+   "../../test_trace.exe printf_in_handler_no_probes.exe | sed 's/Bin_prefix_assorted_handlers_no_probes__//' > %{targets}")))
+
+(alias (name runtest)
+ (deps ../printf_in_handler_no_probes.expected
+  printf_in_handler_no_probes.output)
+ (action
+  (bash
+   "diff -u ../printf_in_handler_no_probes.expected printf_in_handler_no_probes.output")))
+
+(rule (targets probe_in_handler_no_probes.ml)
+ (deps (:first_dep ../probe_in_handler.ml))
+ (action (bash "cp %{first_dep} %{targets}")))
+
+(rule (targets probe_in_handler_no_probes.output)
+ (deps ../../test_trace.exe probe_in_handler_no_probes.exe)
+ (action
+  (bash
+   "../../test_trace.exe probe_in_handler_no_probes.exe | sed 's/Bin_prefix_assorted_handlers_no_probes__//' > %{targets}")))
+
+(alias (name runtest)
+ (deps ../probe_in_handler_no_probes.expected
+  probe_in_handler_no_probes.output)
+ (action
+  (bash
+   "diff -u ../probe_in_handler_no_probes.expected probe_in_handler_no_probes.output")))
+
+(rule (targets probe_is_enabled_no_probes.ml)
+ (deps (:first_dep ../probe_is_enabled.ml))
+ (action (bash "cp %{first_dep} %{targets}")))
+
+(rule (targets probe_is_enabled_no_probes.output)
+ (deps ../../test_trace.exe probe_is_enabled_no_probes.exe)
+ (action
+  (bash
+   "../../test_trace.exe probe_is_enabled_no_probes.exe | sed 's/Bin_prefix_assorted_handlers_no_probes__//' > %{targets}")))
+
+(alias (name runtest)
+ (deps ../probe_is_enabled_no_probes.expected
+  probe_is_enabled_no_probes.output)
+ (action
+  (bash
+   "diff -u ../probe_is_enabled_no_probes.expected probe_is_enabled_no_probes.output")))
+
+(rule (targets test_no_probes.ml) (deps (:first_dep ../test.ml))
+ (action (bash "cp %{first_dep} %{targets}")))
+
+(rule (targets test_no_probes.output)
+ (deps ../../test_trace.exe test_no_probes.exe)
+ (action
+  (bash
+   "../../test_trace.exe test_no_probes.exe | sed 's/Bin_prefix_assorted_handlers_no_probes__//' > %{targets}")))
+
+(alias (name runtest) (deps ../test_no_probes.expected test_no_probes.output)
+ (action (bash "diff -u ../test_no_probes.expected test_no_probes.output")))
+
+(rule (targets comballoc_no_probes.ml) (deps (:first_dep ../comballoc.ml))
+ (action (bash "cp %{first_dep} %{targets}")))
+
+(rule (targets comballoc_no_probes.output)
+ (deps ../../test_trace.exe comballoc_no_probes.exe)
+ (action
+  (bash
+   "../../test_trace.exe comballoc_no_probes.exe | sed 's/Bin_prefix_assorted_handlers_no_probes__//' > %{targets}")))
+
+(alias (name runtest)
+ (deps ../comballoc_no_probes.expected comballoc_no_probes.output)
+ (action
+  (bash "diff -u ../comballoc_no_probes.expected comballoc_no_probes.output")))
+
+(rule (targets cond_probes_no_probes.ml)
+ (deps (:first_dep ../cond_probes.ml))
+ (action (bash "cp %{first_dep} %{targets}")))
+
+(rule (targets cond_probes_no_probes.output)
+ (deps ../../test_trace.exe cond_probes_no_probes.exe)
+ (action
+  (bash
+   "../../test_trace.exe cond_probes_no_probes.exe | sed 's/Bin_prefix_assorted_handlers_no_probes__//' > %{targets}")))
+
+(alias (name runtest)
+ (deps ../cond_probes_no_probes.expected cond_probes_no_probes.output)
+ (action
+  (bash
+   "diff -u ../cond_probes_no_probes.expected cond_probes_no_probes.output")))
+
+(rule (targets raise_in_probe_no_probes.ml)
+ (deps (:first_dep ../raise_in_probe.ml))
+ (action (bash "cp %{first_dep} %{targets}")))
+
+(rule (targets raise_in_probe_no_probes.output)
+ (deps ../../test_trace.exe raise_in_probe_no_probes.exe)
+ (action
+  (bash
+   "../../test_trace.exe raise_in_probe_no_probes.exe | sed 's/Bin_prefix_assorted_handlers_no_probes__//' > %{targets}")))
+
+(alias (name runtest)
+ (deps ../raise_in_probe_no_probes.expected raise_in_probe_no_probes.output)
+ (action
+  (bash
+   "diff -u ../raise_in_probe_no_probes.expected raise_in_probe_no_probes.output")))
+
+(rule (targets rec_probes_no_probes.ml) (deps (:first_dep ../rec_probes.ml))
+ (action (bash "cp %{first_dep} %{targets}")))
+
+(rule (targets rec_probes_no_probes.output)
+ (deps ../../test_trace.exe rec_probes_no_probes.exe)
+ (action
+  (bash
+   "../../test_trace.exe rec_probes_no_probes.exe | sed 's/Bin_prefix_assorted_handlers_no_probes__//' > %{targets}")))
+
+(alias (name runtest)
+ (deps ../rec_probes_no_probes.expected rec_probes_no_probes.output)
+ (action
+  (bash
+   "diff -u ../rec_probes_no_probes.expected rec_probes_no_probes.output")))
+
+(rule (targets two_units_no_probes.ml)
+ (deps (:first_dep ../two_units.ml) s_no_probes.ml t_no_probes.ml)
+ (action
+  (bash
+   "cat %{first_dep} | sed 's/S./S_no_probes./g' | sed 's/T./T_no_probes./g' >  %{targets}")))
+
+(rule (targets t_no_probes.ml) (deps (:first_dep ../t.ml))
+ (action (bash "cp %{first_dep} %{targets}")))
+
+(rule (targets s_no_probes.ml) (deps (:first_dep ../s.ml))
+ (action (bash "cp %{first_dep} %{targets}")))
+
+(rule (targets two_units_no_probes.output)
+ (deps ../../test_trace.exe two_units_no_probes.exe)
+ (action
+  (bash
+   "../../test_trace.exe two_units_no_probes.exe | sed 's/Bin_prefix_assorted_handlers_no_probes__//' > %{targets}")))
+
+(alias (name runtest)
+ (deps ../two_units_no_probes.expected two_units_no_probes.output)
+ (action
+  (bash "diff -u ../two_units_no_probes.expected two_units_no_probes.output")))
+
+(executables
+ (names assorted_handlers_no_probes backtrace_in_handler_no_probes
+  backtrace_in_handler_loop_no_probes exception_in_handler_no_probes
+  gc_in_handler_no_probes gc_in_handler_deep_stack_no_probes
+  many_free_vars_in_handler_no_probes printf_in_handler_no_probes
+  probe_in_handler_no_probes probe_is_enabled_no_probes test_no_probes
+  comballoc_no_probes cond_probes_no_probes raise_in_probe_no_probes
+  rec_probes_no_probes two_units_no_probes)
+ (libraries str) (ocamlopt_flags :standard -no-probes)
+ (preprocess no_preprocessing))
