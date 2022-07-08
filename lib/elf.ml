@@ -52,10 +52,11 @@ module Config = struct
       tbl
       "ocaml"
       { unique_semaphore_per_name = false; separate_semaphore_for_ocaml_handlers = false };
-    Hashtbl.add
-      tbl
-      "ocaml.1"
-      { unique_semaphore_per_name = true; separate_semaphore_for_ocaml_handlers = true };
+    let t1 =
+      { unique_semaphore_per_name = true; separate_semaphore_for_ocaml_handlers = true }
+    in
+    Hashtbl.add tbl "ocaml.1" t1;
+    Hashtbl.add tbl "ocaml_1" t1;
     tbl
   ;;
 

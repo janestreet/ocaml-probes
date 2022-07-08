@@ -146,7 +146,6 @@ end = struct
   type t = int
 
   let max = (1 lsl 16) - 1 (* 0xffff *)
-
   let is_enabled t = t > 0
   let init enabled = if enabled then 1 else 0
   let get t = t
