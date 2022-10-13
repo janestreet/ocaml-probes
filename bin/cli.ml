@@ -34,14 +34,14 @@ let flag_actions =
       List.map ~f:(String.split ~on:',') sl
       |> List.concat
       |> List.fold ~init:String.Set.empty ~f:(fun acc x ->
-        if String.Set.mem acc x
+        if Set.mem acc x
         then
           failwithf
             "Probe name %s appears more than once as an argument of %s"
             x
             name
             ();
-        String.Set.add acc x)
+        Set.add acc x)
   in
   let flag_list a =
     let s = to_string a in
@@ -69,14 +69,14 @@ let flag_actions =
       in
       (List.concat names
        |> List.fold ~init:String.Set.empty ~f:(fun acc x ->
-         if String.Set.mem acc x
+         if Set.mem acc x
          then
            failwithf
              "Probe name %s appears more than once as an argument of %s"
              x
              name
              ();
-         String.Set.add acc x)
+         Set.add acc x)
        : String.Set.t)
       |> ignore;
       List.map ~f:(fun (a, b) -> action, P.Pair (a, b)) pairs |> P.Selected |> Some
@@ -91,20 +91,20 @@ let flag_actions =
   let check_disjoint enable disable =
     (* Detect when the same probe name appears twice under incompatible
        actions Enable and Disable. *)
-    let both = String.Set.inter enable disable in
+    let both = Set.inter enable disable in
     if not (Set.is_empty both)
     then
       failwith
         (sprintf
            "Probe names appear in both -enable and -disable: %s"
-           (String.concat ~sep:" " (String.Set.to_list both)))
+           (String.concat ~sep:" " (Set.to_list both)))
   in
-  let map_action a names c = String.Set.to_list names |> List.map ~f:(fun s -> a, c s) in
+  let map_action a names c = Set.to_list names |> List.map ~f:(fun s -> a, c s) in
   let flag_selected =
     Command.Let_syntax.(
       let%map enable = flag_list P.Enable
       and disable = flag_list P.Disable in
-      if String.Set.is_empty enable && String.Set.is_empty disable
+      if Set.is_empty enable && Set.is_empty disable
       then None
       else (
         check_disjoint enable disable;
