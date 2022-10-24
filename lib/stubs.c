@@ -11,8 +11,6 @@
 #include <sys/mman.h>
 #include <sys/uio.h>
 
-/* #ifdef OCAML_OS_TYPE == "Unix" */
-#if defined(__GNUC__) && (defined (__ELF__))
 #include <linux/ptrace.h>
 
 static inline long ptrace_traceme()
@@ -20,9 +18,6 @@ static inline long ptrace_traceme()
 
 static inline long ptrace_attach(pid_t pid)
 { return ptrace(PTRACE_ATTACH, pid, NULL, NULL); }
-
-/* static inline long ptrace_cont(pid_t pid) */
-/* { return ptrace(PTRACE_CONT, pid, NULL, NULL); } */
 
 static inline long ptrace_detach(pid_t pid)
 { return ptrace(PTRACE_DETACH, pid, NULL, NULL); }
@@ -41,13 +36,6 @@ static inline long ptrace_get_data(pid_t pid, void *addr)
 
 static inline long ptrace_set_data(pid_t pid, void *addr, void *data)
 { return ptrace(PTRACE_POKEDATA, pid, addr, data); }
-
-#elif defined(__APPLE__)
-// untested
-#include <mach/mach_types.h>
-#include <mach/mach.h>
-#include <wrap.h>
-#endif
 
 #include <sys/user.h>
 #include <sys/wait.h>
