@@ -39,8 +39,13 @@ type actions =
 
     [check_prog] is false by default. If [check_prog] is true,
     any changes to a running process by pid will be guarded by a check
-    that the program executed by pid is [prog]. *)
-val create : check_prog:bool -> prog:string -> t
+    that the program executed by pid is [prog].
+
+    [allow_gigatext] is false by default. If [allow_gigatext] is true,
+    probe operations will be allowed even if [prog] maps its [.text]
+    segment onto a 1GB hugepage, resulting in a 1GB copy-on-write
+    and corresponding additional memory usage upon the first update. *)
+val create : ?check_prog:bool -> ?allow_gigatext:bool -> prog:string -> unit -> t
 
 (** Returns the names of probes available in the program associated with [t].
     The array is sorted and containts no duplicates. *)
@@ -100,10 +105,15 @@ val get_exe : pid -> string
 (** Control debug printing. *)
 val set_verbose : bool -> unit
 
+(** Control gigatext policy: see [create]. *)
+val set_allow_gigatext : t -> bool -> unit
+
 (** Get and update the state of probes in the same process. Not atomic.  *)
 module Self : sig
   val update : ?force:bool -> actions -> unit
-  val get_probe_states : unit -> probe_state array
+  val get_probe_states : ?probe_names:probe_name array -> unit -> probe_state array
+  val get_probe_names : unit -> probe_name array
+  val set_allow_gigatext : bool -> unit
 end
 
 (** For expert use only.

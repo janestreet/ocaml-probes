@@ -136,6 +136,16 @@ let _flag_bpf =
       ~doc:" kernel-space tracing using a predefined eBPF handler (requires setuid)")
 ;;
 
+let flag_gt =
+  Command.Param.(
+    flag
+      "-gigatext"
+      no_arg
+      ~doc:
+        " allow processes that map .text onto 1GB hugepages. Modifying probe state may \
+         incur a 1GB copy-on-write operation and additional memory usage.")
+;;
+
 let flag_v =
   Command.Param.(
     flag "-verbose" ~aliases:[ "-v" ] no_arg ~doc:" print lots of info for debug")
@@ -166,10 +176,11 @@ let attach_command =
       and q = flag_q
       and pid = flag_pid
       (* and bpf = flag_bpf *)
-      and actions = flag_actions in
+      and actions = flag_actions
+      and allow_gigatext = flag_gt in
       if v then set_verbose true;
       if q then set_verbose false;
-      fun () -> Main.attach ~pid ~bpf ~actions)
+      fun () -> Main.attach ~pid ~bpf ~actions ~allow_gigatext)
 ;;
 
 let info_command =
@@ -207,13 +218,12 @@ let trace_command =
       and prog = flag_prog
       (* and bpf = flag_bpf *)
       and actions = flag_actions
-      and args =
-        Command.Param.(flag "--" escape ~doc:"args pass the rest to the program")
-      in
+      and args = Command.Param.(flag "--" escape ~doc:"args pass the rest to the program")
+      and allow_gigatext = flag_gt in
       let args = Option.value ~default:[] args in
       if v then set_verbose true;
       if q then set_verbose false;
-      fun () -> Main.trace ~prog ~args ~bpf ~actions)
+      fun () -> Main.trace ~prog ~args ~bpf ~actions ~allow_gigatext)
 ;;
 
 let main_command =

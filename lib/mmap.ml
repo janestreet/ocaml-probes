@@ -2,6 +2,23 @@ exception Error of string
 
 let verbose = ref false
 
+module Page_size = struct
+  type t =
+    | Smallpages
+    | Hugepages
+    | Gigapages
+
+  let in_kb = function
+    | Smallpages -> 4
+    | Hugepages -> 2 * 1024
+    | Gigapages -> 1024 * 1024
+  ;;
+
+  let in_bytes t = in_kb t * 1024
+  let all = [ Smallpages; Hugepages; Gigapages ]
+  let of_kb n = List.find_opt (fun t -> Int.equal n (in_kb t)) all
+end
+
 type entry =
   { addr : int64 (** start address of the segment *)
   ; offset : int64 (** file offset *)
@@ -9,15 +26,19 @@ type entry =
 
 type t =
   { vma_offset_text : int64
+  ; vma_offset_data : int64
   ; vma_offset_semaphores : int64
   }
 
-let is_mapped_from_file (e : Owee_linux_maps.entry) =
-  not (e.inode = 0L && e.device_major = 0 && e.device_minor = 0)
+let default = { vma_offset_text = 0L; vma_offset_data = 0L; vma_offset_semaphores = 0L }
+
+let in_range x a b =
+  match Int64.compare a x, Int64.compare x b with
+  | (-1 | 0), (-1 | 0) -> true
+  | _ -> false
 ;;
 
-(*
-   The following calculation give the dynamic address of a symbol:
+(* The following calculation give the dynamic address of a symbol:
    sym_dynamic_addr
    "symbol's dynamic address"
    = "segment start"
@@ -33,7 +54,7 @@ let is_mapped_from_file (e : Owee_linux_maps.entry) =
    Precompute the offset of dynamic address from static address
    for each type of symbol, making sure it doesn't over/underflow.
 *)
-let vma_offset mmap_entry (elf_section : Elf.section) =
+let _vma_offset mmap_entry (elf_section : Elf.section) =
   if mmap_entry.addr < elf_section.addr || elf_section.offset < mmap_entry.offset
   then raise (Failure "Unexpected section sizes");
   Int64.sub
@@ -41,47 +62,73 @@ let vma_offset mmap_entry (elf_section : Elf.section) =
     elf_section.addr
 ;;
 
-let read ~pid (elf : Elf.t) =
-  let filename = elf.filename in
-  let text = ref None in
-  let data = ref None in
-  let update p (e : Owee_linux_maps.entry) =
-    match !p with
-    | None -> p := Some { addr = e.address_start; offset = e.offset }
-    | Some _ ->
-      raise
-        (Error
-           (Printf.sprintf
-              "Unexpected format of /proc/%d/maps: duplicate segment for %s\n"
-              pid
-              filename))
+let read ~pid:_ (elf : Elf.t) =
+  if elf.pie
+  then
+    failwith
+      "Probes-lib has not implemented support for position independent executables.";
+  default
+;;
+
+let parse_page_size size =
+  let size =
+    match String.split_on_char '=' size with
+    | [ "kernelpagesize_kB"; n ] -> int_of_string_opt n
+    | _ -> None
   in
-  let owee_entries = Owee_linux_maps.scan_pid pid in
-  List.iter
-    (fun (e : Owee_linux_maps.entry) ->
-       if is_mapped_from_file e && String.equal filename e.pathname
-       then (
-         match e.perm_read, e.perm_write, e.perm_execute, e.perm_shared with
-         | true, false, true, false -> update text e
-         | true, true, false, false -> update data e
-         | _ -> ()))
-    owee_entries;
-  match !text, !data, elf.semaphores_section with
-  | Some text, Some data, Some semaphores_section ->
-    { vma_offset_semaphores = vma_offset data semaphores_section
-    ; vma_offset_text = vma_offset text elf.text_section
-    }
-  | None, _, _ ->
-    raise
-      (Error
-         (Printf.sprintf
-            "Unexpected format of /proc/%d/maps: missing executable segment start"
-            pid))
-  | _, None, _ ->
-    raise
-      (Error
-         (Printf.sprintf
-            "Unexpected format of /proc/%d/maps: missing write segment start"
-            pid))
-  | _, _, None -> raise (Failure (Printf.sprintf "No .probes section in %s" elf.filename))
+  match size with
+  | Some n -> Page_size.of_kb n
+  | None -> failwith "Probes-lib could not parse kernelpagesize_kB attribute."
+;;
+
+let get_start_of_text_segment ~pid (elf : Elf.t) =
+  let text = Int64.add elf.text_section.addr (read ~pid elf).vma_offset_text in
+  let mmaps = Owee_linux_maps.scan_pid pid in
+  match
+    List.find_opt
+      (fun (entry : Owee_linux_maps.entry) ->
+         in_range text entry.address_start entry.address_end)
+      mmaps
+  with
+  | Some entry ->
+    assert (entry.perm_read && entry.perm_execute);
+    entry.address_start
+  | None -> failwith "Probes-lib could not find .text segment in /proc/pid/maps."
+;;
+
+let get_text_page_size ~pid (elf : Elf.t) =
+  let numa_maps = Printf.sprintf "/proc/%d/numa_maps" pid in
+  (* Numa_maps is not created if hugepages are not enabled. *)
+  if Sys.file_exists numa_maps
+  then (
+    let text = get_start_of_text_segment ~pid elf in
+    let inc = In_channel.open_text numa_maps in
+    (* The numa_maps format is described here:
+       https://man7.org/linux/man-pages/man5/numa_maps.5.html.
+       Each line contains a base address, memory policy, and list of attributes.
+       The attribute "huge" will be included when hugepages are present.
+       When using lib/segment_remapper, our configuration additionally includes the
+       attribute "kernelpagesize_kB=N", which specifies the size of backing pages. *)
+    let rec parse () =
+      match In_channel.input_line inc with
+      | Some line ->
+        (match String.split_on_char ' ' line with
+         | addr :: _policy :: attrs ->
+           (match Int64.of_string_opt ("0x" ^ addr) with
+            | Some addr when addr = text ->
+              let pagesize =
+                List.find_opt (String.starts_with ~prefix:"kernelpagesize_kB=") attrs
+              in
+              (match pagesize with
+               | Some size -> parse_page_size size
+               | None ->
+                 if List.exists (String.equal "huge") attrs
+                 then (* Hugepages are in use, but we do not know their size. *) None
+                 else Some Smallpages)
+            | _ -> parse ())
+         | _ -> failwith ("Probes-lib got unexpected line in " ^ numa_maps))
+      | None -> failwith ("Probes-lib could not find .text segment in " ^ numa_maps)
+    in
+    parse ())
+  else Some Smallpages
 ;;

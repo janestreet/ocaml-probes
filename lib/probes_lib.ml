@@ -32,6 +32,7 @@ external stub_read_semaphore : mode -> pid -> int64 -> int = "probes_lib_read_se
 external stub_write_probe_sites
   :  mode
   -> pid
+  -> int
   -> int64 array
   -> bool
   -> unit
@@ -66,9 +67,8 @@ type actions =
 
 type process =
   { id : pid
-  ; mmap : Mmap.t option
-  (** Some memory map for a position independent executable, None
-      otherwise *)
+  ; mmap : Mmap.t
+  (** Section dynamic offsets (non-zero for position independent executables only) *)
   }
 
 type status =
@@ -78,6 +78,7 @@ type status =
 type t =
   { mutable status : status (** for ptrace operations *)
   ; check_prog : bool
+  ; mutable allow_gigatext : bool
   (** check that the program executed by pid is elf.filename
       before making changes to process pid  *)
   ; elf : Elf.t
@@ -93,6 +94,8 @@ let set_verbose b =
   ()
 ;;
 
+let set_allow_gigatext t b = t.allow_gigatext <- b
+
 let desc_to_string t probe_desc =
   match probe_desc with
   | Name n -> n
@@ -103,11 +106,31 @@ let desc_to_string t probe_desc =
 
 let get_exe pid = Unix.readlink (Printf.sprintf "/proc/%d/exe" pid)
 
+let check_prog t prog =
+  if t.check_prog
+  then
+    if not (String.equal prog t.elf.filename)
+    then
+      raise
+        (Error
+           (Printf.sprintf
+              "Start: prog is %s but probe notes come from %s\n"
+              prog
+              t.elf.filename))
+;;
+
+let check_prog_by_pid t pid =
+  if t.check_prog
+  then (
+    let exe = get_exe pid in
+    check_prog t exe)
+;;
+
 let (_ : unit) =
   Callback.register_exception "probes_lib_stub_exception" (Error "any string")
 ;;
 
-let create ~check_prog ~prog =
+let create ?(check_prog = false) ?(allow_gigatext = false) ~prog () =
   let filename = stub_realpath prog in
   if !verbose then Printf.printf "create: read probe notes from %s\n" filename;
   let elf = Elf.create ~filename in
@@ -118,17 +141,11 @@ let create ~check_prog ~prog =
     if Array.length probe_names = 0
     then Printf.printf "No probes found in %s\n" prog
     else Array.iteri (fun i name -> Printf.printf "%d:%s\n" i name) probe_names;
-  { probe_names; elf; status = Not_attached; check_prog }
+  { probe_names; elf; status = Not_attached; check_prog; allow_gigatext }
 ;;
 
 let is_self pid = Int.equal pid (Unix.getpid ())
-
-let get_mmap t id =
-  match t.elf.pie with
-  | false -> None
-  | true -> Some (Mmap.read ~pid:id t.elf)
-;;
-
+let get_mmap t id = Mmap.read ~pid:id t.elf
 let get_probe_names t = t.probe_names
 
 module Semaphore : sig
@@ -190,21 +207,13 @@ end
 
 let opcode_address addr ~offset = Int64.add (Int64.add addr offset) (* skip NOP byte *) 1L
 
-let probe_sites (mmap : Mmap.t option) (probe : Elf.probe_info) =
-  let offset =
-    match mmap with
-    | None -> 0L
-    | Some mmap -> mmap.vma_offset_text
-  in
+let probe_sites (mmap : Mmap.t) (probe : Elf.probe_info) =
+  let offset = mmap.vma_offset_text in
   Array.map (fun address -> opcode_address address ~offset) probe.sites
 ;;
 
-let semaphore_addresses (mmap : Mmap.t option) (probe : Elf.probe_info) =
-  let offset =
-    match mmap with
-    | None -> 0L
-    | Some mmap -> mmap.vma_offset_semaphores
-  in
+let semaphore_addresses (mmap : Mmap.t) (probe : Elf.probe_info) =
+  let offset = mmap.vma_offset_semaphores in
   Array.map (Int64.add offset) probe.semaphores
 ;;
 
@@ -245,16 +254,16 @@ let action_to_bool action =
   | Disable -> false
 ;;
 
-let write_probe_sites mode pid addresses enable =
+let write_probe_sites mode pid pagesize addresses enable =
   match mode with
   | Mode_vm ->
     stub_attach pid;
-    stub_write_probe_sites Mode_ptrace pid addresses enable;
+    stub_write_probe_sites Mode_ptrace pid pagesize addresses enable;
     stub_detach pid
-  | Mode_self | Mode_ptrace -> stub_write_probe_sites mode pid addresses enable
+  | Mode_self | Mode_ptrace -> stub_write_probe_sites mode pid pagesize addresses enable
 ;;
 
-let update_one ?(force = false) t ~action ~name ~pid ~mode ~mmap =
+let update_one ?(force = false) t ~action ~name ~pid ~pagesize ~mode ~mmap =
   let probe = Elf.find_probe_note t.elf name in
   let sem_addresses = semaphore_addresses mmap probe in
   let addresses = probe_sites mmap probe in
@@ -264,7 +273,7 @@ let update_one ?(force = false) t ~action ~name ~pid ~mode ~mmap =
   then (
     let v = S.init enable in
     stub_write_semaphore mode pid sem_addresses v;
-    write_probe_sites mode pid addresses enable)
+    write_probe_sites mode pid pagesize addresses enable)
   else (
     let sem_old = stub_read_semaphore mode pid sem_addresses.(0) |> S.create in
     let sem_new =
@@ -274,11 +283,30 @@ let update_one ?(force = false) t ~action ~name ~pid ~mode ~mmap =
     in
     stub_write_semaphore mode pid sem_addresses (S.get sem_new);
     let state_change = not Semaphore.(is_enabled sem_old = is_enabled sem_new) in
-    if state_change then write_probe_sites mode pid addresses enable)
+    if state_change then write_probe_sites mode pid pagesize addresses enable)
 ;;
 
 let update ?force t ~pid ~actions ~mode ~mmap =
-  let f name action = update_one ?force t ~action ~name ~pid ~mode ~mmap in
+  (* Processes can remap their pages, so check each time we want update probes. *)
+  check_prog_by_pid t pid;
+  let pagesize =
+    match Mmap.get_text_page_size ~pid t.elf with
+    | Some ((Smallpages | Hugepages) as size) -> Mmap.Page_size.in_bytes size
+    | Some Gigapages ->
+      if t.allow_gigatext
+      then Mmap.Page_size.in_bytes Gigapages
+      else
+        failwith
+          "Probes-lib is not configured with [allow_gigatext=true], but the target's \
+           [.text] segment is backed by 1GB hugepages. 1GB pages are disabled by default \
+           because the first probe update will trigger a 1GB copy-on-write operation and \
+           increase memory usage by 1GB."
+    | None ->
+      failwith
+        "Probes-lib could not determine the page size backing the target's [.text] \
+         segment."
+  in
+  let f name action = update_one ?force t ~action ~name ~pid ~pagesize ~mode ~mmap in
   let update_from_desc (action, desc) =
     let f name = f name action in
     match desc with
@@ -300,26 +328,6 @@ let update ?force t ~pid ~actions ~mode ~mmap =
   match actions with
   | All action -> Array.iter (fun name -> f name action) t.probe_names
   | Selected l -> List.iter update_from_desc l
-;;
-
-let check_prog t prog =
-  if t.check_prog
-  then
-    if not (String.equal prog t.elf.filename)
-    then
-      raise
-        (Error
-           (Printf.sprintf
-              "Start: prog is %s but probe notes come from %s\n"
-              prog
-              t.elf.filename))
-;;
-
-let check_prog_by_pid t pid =
-  if t.check_prog
-  then (
-    let exe = get_exe pid in
-    check_prog t exe)
 ;;
 
 module With_ptrace = struct
@@ -405,9 +413,10 @@ end
 
 module Self = struct
   let prog = Sys.executable_name
-  let t = lazy (create ~prog ~check_prog:false)
+  let t = lazy (create ~prog ~check_prog:false ~allow_gigatext:false ())
   let pid = Unix.getpid ()
   let mmap = lazy (get_mmap (Lazy.force t) pid)
+  let set_allow_gigatext b = set_allow_gigatext (Lazy.force t) b
 
   (** cannot use ptrace on itself, it will be stuck! *)
   let mode = Mode_self
@@ -416,7 +425,11 @@ module Self = struct
     update ?force (Lazy.force t) ~pid ~actions ~mmap:(Lazy.force mmap) ~mode
   ;;
 
-  let get_probe_states () = get_states (Lazy.force t) ~pid ~mmap:(Lazy.force mmap) ~mode
+  let get_probe_states ?probe_names () =
+    get_states ?probe_names (Lazy.force t) ~pid ~mmap:(Lazy.force mmap) ~mode
+  ;;
+
+  let get_probe_names () = get_probe_names (Lazy.force t)
 end
 
 exception Nothing_to_enable

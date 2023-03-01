@@ -206,3 +206,45 @@ probes provided by `ocaml`:
 The output also shows addresses of the semaphores. Read the value of
 the semaphores to see which probes are enabled, when the program is
 stopped with `gdb`.
+
+## Probes library
+
+The library `probes_lib` provides a way to control probes in a tracee
+programmically from the tracer process. For example, to run a program
+with all probes enabled from the start:
+
+```ocaml
+let trace ~prog ~args =
+  let actions = Probes_lib.All Probes_lib.Enable in
+  let t = P.create ~prog ~check_prog:false  in
+  let pid = Probes_lib.With_ptrace.start t ~args in
+  Probes_lib.With_ptrace.update t ~actions;
+  Probes_lib.With_ptrace.detach t;
+  (t,pid)
+```
+
+To disable all probes in a running process:
+
+```ocaml
+let attach_and_disable t ~pid =
+  let actions = Probes_lib.All Probes_lib.Disable in
+  Probes_lib.With_ptrace.attach t pid;
+  Probes_lib.With_ptrace.update t ~actions;
+  Probes_lib.With_ptrace.detach t
+```
+
+See `Probes_lib` for other actions.
+
+### Toggling probes in the current process
+
+`Probes_lib` provides a way to control probes in the current process
+(i.e., tracer and tracee are the same process). For example, to enable
+all probes named "myapp" in the current process:
+
+```ocaml
+let actions = Probes_lib.Selected [Probes_lib.Enable, Name "myapp"] in
+Probes_lib.Self.update
+```
+
+At the time of writing, the implementation of `Self.update` is naive
+and slow (`mprotect` to toggle each probe site separately).

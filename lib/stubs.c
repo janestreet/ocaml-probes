@@ -240,13 +240,12 @@ static inline uint8_t read_opcode_self (unsigned long addr)
 }
 
 static inline void write_opcode_self (unsigned long addr,
+                                      unsigned long pagesize,
                                       uint8_t opcode)
 {
-  static long pagesize = 0;
-  if (pagesize == 0) pagesize = sysconf(_SC_PAGE_SIZE);
-  if (pagesize == -1) raise_error ("cannot get pagesize");
   long pagestart = addr & ~(pagesize-1);
   errno = 0;
+
   if (mprotect((void *)pagestart, pagesize,
                PROT_READ | PROT_EXEC | PROT_WRITE)) {
     raise_error (
@@ -354,11 +353,12 @@ static inline uint8_t read_opcode(mode mode,
 static inline void write_opcode(mode mode,
                                 pid_t cpid,
                                 unsigned long addr,
+                                unsigned long pagesize,
                                 uint8_t op,
                                 unsigned long data)
 {
   switch (mode) {
-  case Mode_self: write_opcode_self(addr, op); return;
+  case Mode_self: write_opcode_self(addr, pagesize, op); return;
   case Mode_vm: raise_error ("cannot vm_process_write at 0x%x: opcode\n", addr);
   case Mode_ptrace: write_opcode_ptrace(cpid, addr, op, data); return;
   default: raise_error ("mode undefined %d\n", mode);
@@ -369,6 +369,7 @@ static inline void write_opcode(mode mode,
 static inline void modify_opcode(mode mode,
                                  pid_t cpid,
                                  unsigned long addr,
+                                 unsigned long pagesize,
                                  bool enable)
 {
   unsigned long data = 0;
@@ -379,7 +380,7 @@ static inline void modify_opcode(mode mode,
   is_enabled_opcode(opcode, cpid, addr);
   uint8_t new_opcode = get_opcode(enable);
   if (opcode != new_opcode) {
-    write_opcode(mode, cpid, addr, new_opcode, data);
+    write_opcode(mode, cpid, addr, pagesize, new_opcode, data);
   }
 }
 
@@ -493,6 +494,7 @@ value probes_lib_write_semaphore (value v_mode,
 
 value probes_lib_write_probes (value v_mode,
                                value v_pid,
+                               value v_pagesize,
                                value v_addresses,
                                value v_enable)
 {
@@ -500,12 +502,13 @@ value probes_lib_write_probes (value v_mode,
   CAMLlocal1(v_address);
   mode mode = Long_val(v_mode);
   pid_t cpid = Long_val(v_pid);
+  unsigned long pagesize = Long_val(v_pagesize);
   bool enable = Bool_val(v_enable);
   int n = Wosize_val(v_addresses);
   for (int i = 0; i < n; i++) {
     v_address = Field(v_addresses, i);
     const uint64_t address = Int64_val(v_address);
-    modify_opcode(mode, cpid, address, enable);
+    modify_opcode(mode, cpid, address, pagesize, enable);
   }
   CAMLreturn(Val_unit);
 }
