@@ -302,9 +302,9 @@ let update ?force t ~pid ~actions ~mode ~mmap =
            because the first probe update will trigger a 1GB copy-on-write operation and \
            increase memory usage by 1GB."
     | None ->
-      failwith
-        "Probes-lib could not determine the page size backing the target's [.text] \
-         segment."
+      (* Probes-lib could not determine the page size backing the target's [.text] \
+         segment. Assuming Smallpages. *)
+      Mmap.Page_size.in_bytes Smallpages
   in
   let f name action = update_one ?force t ~action ~name ~pid ~pagesize ~mode ~mmap in
   let update_from_desc (action, desc) =

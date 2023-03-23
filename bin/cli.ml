@@ -62,8 +62,7 @@ let flag_actions =
         List.map names ~f:(function
           | [ start; stop ] ->
             if String.equal start stop
-            then
-              failwithf "%s expected two *different* probe names as arguments" name ();
+            then failwithf "%s expected two *different* probe names as arguments" name ();
             start, stop
           | _ -> failwithf "%s expected two comma separated arguments" name ())
       in
