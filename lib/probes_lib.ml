@@ -18,6 +18,7 @@ external stub_start_ptrace : argv:string array -> pid = "probes_lib_start_ptrace
 external stub_attach : pid -> unit = "probes_lib_attach"
 external stub_detach : pid -> unit = "probes_lib_detach"
 external stub_set_verbose : bool -> unit = "probes_lib_set_verbose"
+external stub_sysconf_pagesize : unit -> int = "probes_lib_sysconf_pagesize"
 
 external stub_write_semaphore
   :  mode
@@ -65,14 +66,8 @@ type actions =
   | All of action
   | Selected of (action * probe_desc) list
 
-type process =
-  { id : pid
-  ; mmap : Mmap.t
-  (** Section dynamic offsets (non-zero for position independent executables only) *)
-  }
-
 type status =
-  | Attached of process
+  | Attached of { pid : int }
   | Not_attached
 
 type t =
@@ -145,7 +140,6 @@ let create ?(check_prog = false) ?(allow_gigatext = false) ~prog () =
 ;;
 
 let is_self pid = Int.equal pid (Unix.getpid ())
-let get_mmap t id = Mmap.read ~pid:id t.elf
 let get_probe_names t = t.probe_names
 
 module Semaphore : sig
@@ -225,7 +219,8 @@ let read_semaphore mode pid addresses =
 (* Reads the value of probe semaphores in process's memory. An
    alternative implementation (for example, if semaphores aren't in use),
    could be to check the instruction at the probe in the text section. *)
-let get_states ?probe_names t ~mode ~pid ~mmap =
+let get_states ?probe_names t ~mode ~pid =
+  let mmap = Mmap.read ~pid t.elf in
   let probe_names =
     match probe_names with
     | None -> t.probe_names
@@ -286,26 +281,11 @@ let update_one ?(force = false) t ~action ~name ~pid ~pagesize ~mode ~mmap =
     if state_change then write_probe_sites mode pid pagesize addresses enable)
 ;;
 
-let update ?force t ~pid ~actions ~mode ~mmap =
-  (* Processes can remap their pages, so check each time we want update probes. *)
+let update ?force t ~pid ~actions ~mode =
+  (* We may have forked, so re-check maps whenever we update probes. *)
   check_prog_by_pid t pid;
-  let pagesize =
-    match Mmap.get_text_page_size ~pid t.elf with
-    | Some ((Smallpages | Hugepages) as size) -> Mmap.Page_size.in_bytes size
-    | Some Gigapages ->
-      if t.allow_gigatext
-      then Mmap.Page_size.in_bytes Gigapages
-      else
-        failwith
-          "Probes-lib is not configured with [allow_gigatext=true], but the target's \
-           [.text] segment is backed by 1GB hugepages. 1GB pages are disabled by default \
-           because the first probe update will trigger a 1GB copy-on-write operation and \
-           increase memory usage by 1GB."
-    | None ->
-      (* Probes-lib could not determine the page size backing the target's [.text] \
-         segment. Assuming Smallpages. *)
-      Mmap.Page_size.in_bytes Smallpages
-  in
+  let mmap = Mmap.read ~pid t.elf in
+  let pagesize = stub_sysconf_pagesize () in
   let f name action = update_one ?force t ~action ~name ~pid ~pagesize ~mode ~mmap in
   let update_from_desc (action, desc) =
     let f name = f name action in
@@ -332,7 +312,7 @@ let update ?force t ~pid ~actions ~mode ~mmap =
 
 module With_ptrace = struct
   (* Updates [t.status] after stub to ensure stub didn't raise *)
-  let set_status t id = t.status <- Attached { id; mmap = get_mmap t id }
+  let set_status t id = t.status <- Attached { pid = id }
 
   let start t ~args =
     let prog = t.elf.filename in
@@ -347,7 +327,7 @@ module With_ptrace = struct
     | Attached existing_p ->
       raise
         (Error
-           (Printf.sprintf "Cannot start %s, already attached to %d" prog existing_p.id))
+           (Printf.sprintf "Cannot start %s, already attached to %d" prog existing_p.pid))
     | Not_attached ->
       let pid = stub_start_ptrace ~argv in
       set_status t pid;
@@ -360,7 +340,7 @@ module With_ptrace = struct
     if !verbose then Printf.printf "pid %d executing %s\n" pid t.elf.filename;
     match t.status with
     | Attached existing_p ->
-      if Int.equal existing_p.id pid
+      if Int.equal existing_p.pid pid
       then raise (Error (Printf.sprintf "Already attached to %d" pid))
       else
         raise
@@ -368,7 +348,7 @@ module With_ptrace = struct
              (Printf.sprintf
                 "Cannot attach to %d, already attached to %d"
                 pid
-                existing_p.id))
+                existing_p.pid))
     | Not_attached ->
       if is_self pid then raise (Error (Printf.sprintf "Cannot attach to itself %d" pid));
       stub_attach pid;
@@ -378,13 +358,13 @@ module With_ptrace = struct
   let update ?force t ~actions =
     match t.status with
     | Not_attached -> raise (Error "update failed: no pid\n")
-    | Attached p -> update ?force t ~actions ~pid:p.id ~mode:Mode_ptrace ~mmap:p.mmap
+    | Attached p -> update ?force t ~actions ~pid:p.pid ~mode:Mode_ptrace
   ;;
 
   let get_probe_states ?probe_names t =
     match t.status with
     | Not_attached -> raise (Error "cannot get probe states: no pid\n")
-    | Attached p -> get_states ?probe_names t ~pid:p.id ~mmap:p.mmap ~mode:Mode_ptrace
+    | Attached p -> get_states ?probe_names t ~pid:p.pid ~mode:Mode_ptrace
   ;;
 
   (* We use PTRACE_DETACH and not PTRACE_CONT: After sending PTRACE_CONT signal
@@ -401,7 +381,7 @@ module With_ptrace = struct
     match t.status with
     | Not_attached -> raise (Error "detach failed: no pid\n")
     | Attached p ->
-      stub_detach p.id;
+      stub_detach p.pid;
       t.status <- Not_attached
   ;;
 end
@@ -413,23 +393,19 @@ end
 
 module Self = struct
   let prog = Sys.executable_name
-  let t = lazy (create ~prog ~check_prog:false ~allow_gigatext:false ())
-  let pid = Unix.getpid ()
-  let mmap = lazy (get_mmap (Lazy.force t) pid)
-  let set_allow_gigatext b = set_allow_gigatext (Lazy.force t) b
+  let t = create ~prog ~check_prog:false ~allow_gigatext:false ()
+  let set_allow_gigatext b = set_allow_gigatext t b
 
   (** cannot use ptrace on itself, it will be stuck! *)
   let mode = Mode_self
 
-  let update ?force actions =
-    update ?force (Lazy.force t) ~pid ~actions ~mmap:(Lazy.force mmap) ~mode
-  ;;
+  let update ?force actions = update ?force t ~pid:(Unix.getpid ()) ~actions ~mode
 
   let get_probe_states ?probe_names () =
-    get_states ?probe_names (Lazy.force t) ~pid ~mmap:(Lazy.force mmap) ~mode
+    get_states ?probe_names t ~pid:(Unix.getpid ()) ~mode
   ;;
 
-  let get_probe_names () = get_probe_names (Lazy.force t)
+  let get_probe_names () = get_probe_names t
 end
 
 exception Nothing_to_enable
@@ -491,8 +467,8 @@ let trace_existing_process ?(atomically = false) ?force t ~pid ~(actions : actio
     Self.update ?force actions
   | false ->
     (match t.status with
-     | Attached p when Int.equal p.id pid ->
-       update ?force t ~mode:Mode_ptrace ~pid:p.id ~mmap:p.mmap ~actions
+     | Attached p when Int.equal p.pid pid ->
+       update ?force t ~mode:Mode_ptrace ~pid:p.pid ~actions
      | Attached _ | Not_attached ->
        (match atomically with
         | true ->
@@ -500,7 +476,7 @@ let trace_existing_process ?(atomically = false) ?force t ~pid ~(actions : actio
           P.attach t pid;
           P.update t ~actions;
           P.detach t
-        | false -> update ?force t ~mode:Mode_vm ~pid ~actions ~mmap:(get_mmap t pid)))
+        | false -> update ?force t ~mode:Mode_vm ~pid ~actions))
 ;;
 
 let get_probe_states ?(atomically = false) t ~pid =
@@ -512,8 +488,7 @@ let get_probe_states ?(atomically = false) t ~pid =
     Self.get_probe_states ()
   | false ->
     (match t.status with
-     | Attached p when Int.equal p.id pid ->
-       get_states t ~mode:Mode_ptrace ~pid:p.id ~mmap:p.mmap
+     | Attached p when Int.equal p.pid pid -> get_states t ~mode:Mode_ptrace ~pid:p.pid
      | Attached _ | Not_attached ->
        (match atomically with
         | true ->
@@ -522,5 +497,5 @@ let get_probe_states ?(atomically = false) t ~pid =
           let probe_states = P.get_probe_states t in
           P.detach t;
           probe_states
-        | false -> get_states t ~mode:Mode_vm ~pid ~mmap:(get_mmap t pid)))
+        | false -> get_states t ~mode:Mode_vm ~pid))
 ;;

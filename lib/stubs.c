@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <setjmp.h>
 #include <string.h>
 #include <stdint.h>
 #include <stdbool.h>
@@ -239,6 +240,14 @@ static inline uint8_t read_opcode_self (unsigned long addr)
   return opcode;
 }
 
+static sigjmp_buf sigbus_jmp_buf;
+
+static inline void handle_sigbus (int sig) {
+  if (sig == SIGBUS) {
+    siglongjmp(sigbus_jmp_buf, 1);
+  }
+}
+
 static inline void write_opcode_self (unsigned long addr,
                                       unsigned long pagesize,
                                       uint8_t opcode)
@@ -255,7 +264,19 @@ static inline void write_opcode_self (unsigned long addr,
                  addr, pagestart, pagesize, write, errno);
   }
 
-  *((uint8_t *) addr) = opcode;
+  volatile sighandler_t prev = SIG_DFL;
+  if (sigsetjmp(sigbus_jmp_buf, 1) == 0) {
+    prev = signal(SIGBUS, handle_sigbus);
+    *((uint8_t *) addr) = opcode;
+    signal(SIGBUS, prev);
+  } else {
+    signal(SIGBUS, prev);
+    raise_error (
+                 "modify_probe in self: text segment write failed to reserve a backing "
+                 "page and raised SIGBUS. (pagestart=%lx, pagesize=%lx)",
+                 pagestart, pagesize);
+  }
+
   errno = 0;
   if (mprotect((void *)pagestart, pagesize,  PROT_READ | PROT_EXEC)) {
     raise_error (
@@ -461,9 +482,9 @@ CAMLprim value probes_lib_detach (value v_pid)
   return Val_unit;
 }
 
-value probes_lib_read_semaphore (value v_mode,
-                                  value v_pid,
-                                  value v_address)
+CAMLprim value probes_lib_read_semaphore (value v_mode,
+                                          value v_pid,
+                                          value v_address)
 {
   CAMLparam1(v_address);
   mode mode = Long_val(v_mode);
@@ -472,10 +493,10 @@ value probes_lib_read_semaphore (value v_mode,
   CAMLreturn(Val_long(read_semaphore(mode, cpid, address)));
 }
 
-value probes_lib_write_semaphore (value v_mode,
-                                   value v_pid,
-                                   value v_addresses,
-                                   value v_sem)
+CAMLprim value probes_lib_write_semaphore (value v_mode,
+                                           value v_pid,
+                                           value v_addresses,
+                                           value v_sem)
 {
   CAMLparam1(v_addresses);
   CAMLlocal1(v_address);
@@ -492,11 +513,11 @@ value probes_lib_write_semaphore (value v_mode,
 }
 
 
-value probes_lib_write_probes (value v_mode,
-                               value v_pid,
-                               value v_pagesize,
-                               value v_addresses,
-                               value v_enable)
+CAMLprim value probes_lib_write_probes (value v_mode,
+                                        value v_pid,
+                                        value v_pagesize,
+                                        value v_addresses,
+                                        value v_enable)
 {
   CAMLparam1(v_addresses);
   CAMLlocal1(v_address);
@@ -529,4 +550,11 @@ CAMLprim value probes_lib_realpath(value v_filename)
   value v_res = caml_copy_string(res);
   free(res);
   CAMLreturn(v_res);
+}
+
+CAMLprim value probes_lib_sysconf_pagesize(value v_unit)
+{
+  (void)v_unit;
+  long pagesize = sysconf(_SC_PAGE_SIZE);
+  return Val_long(pagesize);
 }

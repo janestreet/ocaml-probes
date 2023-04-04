@@ -2,23 +2,6 @@ exception Error of string
 
 let verbose = ref false
 
-module Page_size = struct
-  type t =
-    | Smallpages
-    | Hugepages
-    | Gigapages
-
-  let in_kb = function
-    | Smallpages -> 4
-    | Hugepages -> 2 * 1024
-    | Gigapages -> 1024 * 1024
-  ;;
-
-  let in_bytes t = in_kb t * 1024
-  let all = [ Smallpages; Hugepages; Gigapages ]
-  let of_kb n = List.find_opt (fun t -> Int.equal n (in_kb t)) all
-end
-
 type entry =
   { addr : int64 (** start address of the segment *)
   ; offset : int64 (** file offset *)
@@ -31,12 +14,6 @@ type t =
   }
 
 let default = { vma_offset_text = 0L; vma_offset_data = 0L; vma_offset_semaphores = 0L }
-
-let in_range x a b =
-  match Int64.compare a x, Int64.compare x b with
-  | (-1 | 0), (-1 | 0) -> true
-  | _ -> false
-;;
 
 (* The following calculation give the dynamic address of a symbol:
    sym_dynamic_addr
@@ -68,83 +45,4 @@ let read ~pid:_ (elf : Elf.t) =
     failwith
       "Probes-lib has not implemented support for position independent executables.";
   default
-;;
-
-let parse_page_size size =
-  let size =
-    match String.split_on_char '=' size with
-    | [ "kernelpagesize_kB"; n ] -> int_of_string_opt n
-    | _ -> None
-  in
-  match size with
-  | Some n -> Page_size.of_kb n
-  | None -> failwith "Probes-lib could not parse kernelpagesize_kB attribute."
-;;
-
-let get_start_of_text_segment ~pid (elf : Elf.t) =
-  let text = Int64.add elf.text_section.addr (read ~pid elf).vma_offset_text in
-  let mmaps = Owee_linux_maps.scan_pid pid in
-  match
-    List.find_opt
-      (fun (entry : Owee_linux_maps.entry) ->
-         in_range text entry.address_start entry.address_end)
-      mmaps
-  with
-  | Some entry ->
-    assert (entry.perm_read && entry.perm_execute);
-    Some entry.address_start
-  | None -> None
-;;
-
-let get_text_page_size ~pid (elf : Elf.t) : Page_size.t option =
-  let maps = Printf.sprintf "/proc/%d/maps" pid in
-  let numa_maps = Printf.sprintf "/proc/%d/numa_maps" pid in
-  let could_have_hugetext =
-    try
-      if Sys.file_exists maps && Sys.file_exists numa_maps
-      then get_start_of_text_segment ~pid elf
-      else
-        (* If either file is missing, pid cannot have remapped its .text onto hugepages. *)
-        None
-    with
-    | Sys_error _ ->
-      (* One of these is true:
-         - We do not have permission to read our own maps, so cannot have remapped .text.
-         - We are trying to modify another process without permission and will fail. *)
-      None
-  in
-  match could_have_hugetext with
-  | None -> Some Smallpages
-  | Some text ->
-    (* The numa_maps format is described here:
-       https://man7.org/linux/man-pages/man5/numa_maps.5.html.
-       Each line contains a base address, memory policy, and list of attributes.
-       The attribute "huge" will be included when hugepages are present.
-       When using lib/segment_remapper, our configuration additionally includes the
-       attribute "kernelpagesize_kB=N", which specifies the size of backing pages. *)
-    let rec parse inc =
-      match In_channel.input_line inc with
-      | Some line ->
-        (match String.split_on_char ' ' line with
-         | addr :: _policy :: attrs ->
-           (match Int64.of_string_opt ("0x" ^ addr) with
-            | Some addr when addr = text ->
-              let pagesize =
-                List.find_opt (String.starts_with ~prefix:"kernelpagesize_kB=") attrs
-              in
-              (match pagesize with
-               | Some size -> parse_page_size size
-               | None ->
-                 if List.exists (String.equal "huge") attrs
-                 then (* Hugepages are in use, but we do not know their size. *) None
-                 else Some Smallpages)
-            | _ -> parse inc)
-         | _ -> failwith ("Probes-lib got unexpected line in " ^ numa_maps))
-      | None -> None
-    in
-    (try
-       let inc = In_channel.open_text numa_maps in
-       parse inc
-     with
-     | Sys_error _ -> (* We cannot read numa_maps, so the page size is unknown. *) None)
 ;;

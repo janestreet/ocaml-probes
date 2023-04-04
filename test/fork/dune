@@ -1,0 +1,20 @@
+(executables (names control_child child_self dead_parent)
+ (libraries probes_lib_test) (preprocess (pps ppx_jane)))
+
+(rule (targets control_child.corrected) (deps control_child.exe)
+ (action (bash "./control_child.exe > %{targets}")))
+
+(rule (targets child_self.corrected) (deps child_self.exe)
+ (action (bash "./child_self.exe > %{targets}")))
+
+(rule (targets dead_parent.corrected) (deps dead_parent.exe)
+ (action (bash "./dead_parent.exe > %{targets}")))
+
+(alias (name runtest) (deps control_child.expected control_child.corrected)
+ (action (bash "diff -u control_child.expected control_child.corrected")))
+
+(alias (name runtest) (deps child_self.expected child_self.corrected)
+ (action (bash "diff -u child_self.expected child_self.corrected")))
+
+(alias (name runtest) (deps dead_parent.expected dead_parent.corrected)
+ (action (bash "diff -u dead_parent.expected dead_parent.corrected")))
