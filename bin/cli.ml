@@ -122,7 +122,7 @@ let flag_actions =
     ; flag_pair P.Disable
     ; flag_selected
     ]
-    ~if_nothing_chosen:(Default_to (P.All P.Enable))
+    ~if_nothing_chosen:Raise
 ;;
 
 let bpf = false

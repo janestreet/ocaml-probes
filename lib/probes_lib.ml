@@ -30,15 +30,6 @@ external stub_write_semaphore
 
 external stub_read_semaphore : mode -> pid -> int64 -> int = "probes_lib_read_semaphore"
 
-external stub_write_probe_sites
-  :  mode
-  -> pid
-  -> int
-  -> int64 array
-  -> bool
-  -> unit
-  = "probes_lib_write_probes"
-
 type probe_state =
   { name : probe_name
   ; enabled : bool
@@ -249,65 +240,110 @@ let action_to_bool action =
   | Disable -> false
 ;;
 
-let write_probe_sites mode pid pagesize addresses enable =
-  match mode with
-  | Mode_vm ->
-    stub_attach pid;
-    stub_write_probe_sites Mode_ptrace pid pagesize addresses enable;
-    stub_detach pid
-  | Mode_self | Mode_ptrace -> stub_write_probe_sites mode pid pagesize addresses enable
-;;
+module Probe_update = struct
+  type t =
+    { (* Keep in sync with C stub "probes_lib_write_probes" *)
+      address : int64
+    ; enable : bool
+    }
 
-let update_one ?(force = false) t ~action ~name ~pid ~pagesize ~mode ~mmap =
-  let probe = Elf.find_probe_note t.elf name in
-  let sem_addresses = semaphore_addresses mmap probe in
-  let addresses = probe_sites mmap probe in
-  let enable = action_to_bool action in
-  let module S = Semaphore in
-  if force
-  then (
-    let v = S.init enable in
-    stub_write_semaphore mode pid sem_addresses v;
-    write_probe_sites mode pid pagesize addresses enable)
-  else (
-    let sem_old = stub_read_semaphore mode pid sem_addresses.(0) |> S.create in
-    let sem_new =
-      match action with
-      | Enable -> S.incr sem_old
-      | Disable -> S.decr sem_old
+  external stub_write_probe_sites
+    :  mode
+    -> pid
+    -> int64
+    -> int
+    -> t array
+    -> unit
+    = "probes_lib_write_probes"
+
+  module Map = Map.Make (Int64)
+
+  let one ?(force = false) t ~action ~name ~pid ~mode ~mmap =
+    let probe = Elf.find_probe_note t.elf name in
+    let sem_addresses = semaphore_addresses mmap probe in
+    let addresses = probe_sites mmap probe in
+    let enable = action_to_bool action in
+    let module S = Semaphore in
+    if force
+    then (
+      let v = S.init enable in
+      stub_write_semaphore mode pid sem_addresses v;
+      Array.map (fun address -> { address; enable }) addresses)
+    else (
+      let sem_old = stub_read_semaphore mode pid sem_addresses.(0) |> S.create in
+      let sem_new =
+        match action with
+        | Enable -> S.incr sem_old
+        | Disable -> S.decr sem_old
+      in
+      stub_write_semaphore mode pid sem_addresses (S.get sem_new);
+      let state_change = not Semaphore.(is_enabled sem_old = is_enabled sem_new) in
+      if state_change
+      then Array.map (fun address -> { address; enable }) addresses
+      else [||])
+  ;;
+
+  let split_by_page ~pagesize addresses =
+    (* assumes that [pagesize] is a power of 2. *)
+    let mask = pagesize - 1 |> Int64.of_int |> Int64.lognot in
+    List.fold_left
+      (fun acc ({ address; _ } as t) ->
+         let page = Int64.(logand address mask) in
+         Map.update
+           page
+           (function
+             | Some l -> Some (t :: l)
+             | None -> Some [ t ])
+           acc)
+      Map.empty
+      addresses
+    |> Map.map Array.of_list
+  ;;
+
+  let apply ~pid ~mode ~pagesize ts =
+    let by_page = split_by_page ~pagesize (Array.to_list ts) in
+    let write_sites mode pagestart addrs =
+      stub_write_probe_sites mode pid pagestart pagesize addrs
     in
-    stub_write_semaphore mode pid sem_addresses (S.get sem_new);
-    let state_change = not Semaphore.(is_enabled sem_old = is_enabled sem_new) in
-    if state_change then write_probe_sites mode pid pagesize addresses enable)
-;;
+    match mode with
+    | Mode_vm ->
+      stub_attach pid;
+      Map.iter (write_sites Mode_ptrace) by_page;
+      stub_detach pid
+    | Mode_self | Mode_ptrace -> Map.iter (write_sites mode) by_page
+  ;;
+end
 
 let update ?force t ~pid ~actions ~mode =
   (* We may have forked, so re-check maps whenever we update probes. *)
   check_prog_by_pid t pid;
   let mmap = Mmap.read ~pid t.elf in
   let pagesize = stub_sysconf_pagesize () in
-  let f name action = update_one ?force t ~action ~name ~pid ~pagesize ~mode ~mmap in
+  let f name action = Probe_update.one ?force t ~action ~name ~pid ~mode ~mmap in
   let update_from_desc (action, desc) =
     let f name = f name action in
     match desc with
-    | Name name -> f name
+    | Name name -> [| f name |]
     | Pair (start, stop) ->
       (* Reduce the chance of recording an unclosed event by
          executing start when the matching stop is disabled. *)
       (match action with
-       | Enable ->
-         f stop;
-         f start
-       | Disable ->
-         f start;
-         f stop)
+       | Enable -> [| f stop; f start |]
+       | Disable -> [| f start; f stop |])
     | Regex (_, regexp) ->
-      Array.iter (fun name -> if Str.string_match regexp name 0 then f name) t.probe_names
-    | Predicate p -> Array.iter (fun name -> if p name then f name) t.probe_names
+      Array.map
+        (fun name -> if Str.string_match regexp name 0 then f name else [||])
+        t.probe_names
+    | Predicate p -> Array.map (fun name -> if p name then f name else [||]) t.probe_names
   in
-  match actions with
-  | All action -> Array.iter (fun name -> f name action) t.probe_names
-  | Selected l -> List.iter update_from_desc l
+  let updates =
+    (match actions with
+     | All action -> Array.map (fun name -> f name action) t.probe_names
+     | Selected l -> List.map update_from_desc l |> Array.concat)
+    |> Array.to_list
+    |> Array.concat
+  in
+  Probe_update.apply ~pid ~mode ~pagesize updates
 ;;
 
 module With_ptrace = struct

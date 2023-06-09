@@ -240,6 +240,22 @@ static inline uint8_t read_opcode_self (unsigned long addr)
   return opcode;
 }
 
+static inline void mprotect_self (bool for_writing,
+                                  unsigned long pagestart,
+                                  unsigned long pagesize) {
+
+  int prot = PROT_READ | PROT_EXEC | (for_writing ? PROT_WRITE : 0);
+
+  errno = 0;
+  if (mprotect((void *)pagestart, pagesize, prot)) {
+    raise_error (
+                 "modify_probe in self"
+                 "(self) mprotect add write prot failed at "
+                 "(pagestart=%lx, pagesize=%lx) with errno %d",
+                 pagestart, pagesize, write, errno);
+  }
+}
+
 static sigjmp_buf sigbus_jmp_buf;
 
 static inline void handle_sigbus (int sig) {
@@ -249,21 +265,8 @@ static inline void handle_sigbus (int sig) {
 }
 
 static inline void write_opcode_self (unsigned long addr,
-                                      unsigned long pagesize,
                                       uint8_t opcode)
 {
-  long pagestart = addr & ~(pagesize-1);
-  errno = 0;
-
-  if (mprotect((void *)pagestart, pagesize,
-               PROT_READ | PROT_EXEC | PROT_WRITE)) {
-    raise_error (
-                 "modify_probe in self"
-                 "(self) mprotect add write prot failed at %lx"
-                 "(pagestart=%lx, pagesize=%lx) with errno %d",
-                 addr, pagestart, pagesize, write, errno);
-  }
-
   volatile sighandler_t prev = SIG_DFL;
   if (sigsetjmp(sigbus_jmp_buf, 1) == 0) {
     prev = signal(SIGBUS, handle_sigbus);
@@ -271,19 +274,8 @@ static inline void write_opcode_self (unsigned long addr,
     signal(SIGBUS, prev);
   } else {
     signal(SIGBUS, prev);
-    raise_error (
-                 "modify_probe in self: text segment write failed to reserve a backing "
-                 "page and raised SIGBUS. (pagestart=%lx, pagesize=%lx)",
-                 pagestart, pagesize);
-  }
-
-  errno = 0;
-  if (mprotect((void *)pagestart, pagesize,  PROT_READ | PROT_EXEC)) {
-    raise_error (
-                 "modify_probe in self:"
-                 "(self) mprotect remote write prot failed at %lx"
-                 "(pagestart=%lx, pagesize=%lx) with errno %d",
-                 addr, pagestart, pagesize, write, errno);
+    raise_error ("modify_probe in self: text segment write failed to reserve a backing "
+                 "page and raised SIGBUS. (addr=%lx)", addr);
   }
 }
 
@@ -374,12 +366,11 @@ static inline uint8_t read_opcode(mode mode,
 static inline void write_opcode(mode mode,
                                 pid_t cpid,
                                 unsigned long addr,
-                                unsigned long pagesize,
                                 uint8_t op,
                                 unsigned long data)
 {
   switch (mode) {
-  case Mode_self: write_opcode_self(addr, pagesize, op); return;
+  case Mode_self: write_opcode_self(addr, op); return;
   case Mode_vm: raise_error ("cannot vm_process_write at 0x%x: opcode\n", addr);
   case Mode_ptrace: write_opcode_ptrace(cpid, addr, op, data); return;
   default: raise_error ("mode undefined %d\n", mode);
@@ -390,7 +381,6 @@ static inline void write_opcode(mode mode,
 static inline void modify_opcode(mode mode,
                                  pid_t cpid,
                                  unsigned long addr,
-                                 unsigned long pagesize,
                                  bool enable)
 {
   unsigned long data = 0;
@@ -401,7 +391,7 @@ static inline void modify_opcode(mode mode,
   is_enabled_opcode(opcode, cpid, addr);
   uint8_t new_opcode = get_opcode(enable);
   if (opcode != new_opcode) {
-    write_opcode(mode, cpid, addr, pagesize, new_opcode, data);
+    write_opcode(mode, cpid, addr, new_opcode, data);
   }
 }
 
@@ -512,25 +502,36 @@ CAMLprim value probes_lib_write_semaphore (value v_mode,
   CAMLreturn(Val_unit);
 }
 
-
 CAMLprim value probes_lib_write_probes (value v_mode,
                                         value v_pid,
+                                        value v_pagestart,
                                         value v_pagesize,
-                                        value v_addresses,
-                                        value v_enable)
+                                        value v_updates)
 {
-  CAMLparam1(v_addresses);
-  CAMLlocal1(v_address);
+  CAMLparam1(v_updates);
+  CAMLlocal2(v_update, v_address);
   mode mode = Long_val(v_mode);
   pid_t cpid = Long_val(v_pid);
-  unsigned long pagesize = Long_val(v_pagesize);
-  bool enable = Bool_val(v_enable);
-  int n = Wosize_val(v_addresses);
-  for (int i = 0; i < n; i++) {
-    v_address = Field(v_addresses, i);
-    const uint64_t address = Int64_val(v_address);
-    modify_opcode(mode, cpid, address, pagesize, enable);
+  const uint64_t pagestart = Int64_val(v_pagestart);
+  const unsigned long pagesize = Long_val(v_pagesize);
+  int n = Wosize_val(v_updates);
+
+  if (mode == Mode_self) {
+    mprotect_self(true, pagestart, pagesize);
   }
+
+  for (int i = 0; i < n; i++) {
+    v_update = Field(v_updates, i);
+    v_address = Field(v_update, 0);
+    const bool enable = Bool_val(Field(v_update, 1));
+    const uint64_t address = Int64_val(v_address);
+    modify_opcode(mode, cpid, address, enable);
+  }
+
+  if (mode == Mode_self) {
+    mprotect_self(false, pagestart, pagesize);
+  }
+
   CAMLreturn(Val_unit);
 }
 
