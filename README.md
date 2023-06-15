@@ -245,6 +245,3 @@ all probes named "myapp" in the current process:
 let actions = Probes_lib.Selected [Probes_lib.Enable, Name "myapp"] in
 Probes_lib.Self.update
 ```
-
-At the time of writing, the implementation of `Self.update` is naive
-and slow (`mprotect` to toggle each probe site separately).
