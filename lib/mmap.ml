@@ -2,6 +2,31 @@ exception Error of string
 
 let verbose = ref false
 
+module Pid_or_self = struct
+  type t =
+    | Self of int
+    | Other of int
+
+  let self () = Self (Unix.getpid ())
+
+  let of_pid pid =
+    match pid = Unix.getpid () with
+    | true -> Self pid
+    | false -> Other pid
+  ;;
+
+  let proc_path ~filename = function
+    | Self _ -> "/proc/self/" ^ filename
+    | Other pid -> Printf.sprintf "/proc/%d/%s" pid filename
+  ;;
+
+  let get_exe t = proc_path ~filename:"exe" t |> Unix.readlink
+
+  let to_pid = function
+    | Self pid | Other pid -> pid
+  ;;
+end
+
 type entry =
   { addr : int64 (** start address of the segment *)
   ; offset : int64 (** file offset *)

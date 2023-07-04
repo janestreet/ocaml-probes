@@ -4,6 +4,8 @@ type t
 
 exception Error of string
 
+module Pid_or_self = Mmap.Pid_or_self
+
 type pid = int
 type probe_name = string
 

@@ -4,6 +4,8 @@ let (_ : unit) =
   Callback.register_exception "caml_probes_lib_stub_exception" (Error "any string")
 ;;
 
+module Pid_or_self = Mmap.Pid_or_self
+
 type pid = int
 type probe_name = string
 
@@ -90,7 +92,7 @@ let desc_to_string t probe_desc =
   | Predicate p -> Array.to_list t.probe_names |> List.filter p |> String.concat ","
 ;;
 
-let get_exe pid = Unix.readlink (Printf.sprintf "/proc/%d/exe" pid)
+let get_exe pid = Pid_or_self.of_pid pid |> Pid_or_self.get_exe
 
 let check_prog t prog =
   if t.check_prog
@@ -108,7 +110,7 @@ let check_prog t prog =
 let check_prog_by_pid t pid =
   if t.check_prog
   then (
-    let exe = get_exe pid in
+    let exe = Pid_or_self.get_exe pid in
     check_prog t exe)
 ;;
 
@@ -203,6 +205,8 @@ let semaphore_addresses (mmap : Mmap.t) (probe : Elf.probe_info) =
 ;;
 
 let read_semaphore mode pid addresses =
+  (* When mode = Mode_self, stub_read_semaphore ignores the pid. *)
+  let pid = Pid_or_self.to_pid pid in
   (* Assumes that all semaphores have the same values *)
   stub_read_semaphore mode pid addresses.(0) |> Semaphore.create
 ;;
@@ -259,6 +263,9 @@ module Probe_update = struct
   module Map = Map.Make (Int64)
 
   let one ?(force = false) t ~action ~name ~pid ~mode ~mmap =
+    (* When mode = Mode_self, stub_read_semaphore and stub_write_semaphore
+       ignore the pid. *)
+    let pid = Pid_or_self.to_pid pid in
     let probe = Elf.find_probe_note t.elf name in
     let sem_addresses = semaphore_addresses mmap probe in
     let addresses = probe_sites mmap probe in
@@ -301,6 +308,9 @@ module Probe_update = struct
   ;;
 
   let apply ~pid ~mode ~pagesize ts =
+    (* When mode = Mode_self, stub_write_probe_sites ignores the pid,
+       except for error messages. *)
+    let pid = Pid_or_self.to_pid pid in
     let by_page = split_by_page ~pagesize (Array.to_list ts) in
     let write_sites mode pagestart addrs =
       stub_write_probe_sites mode pid pagestart pagesize addrs
@@ -372,7 +382,8 @@ module With_ptrace = struct
 
   let attach t pid =
     if !verbose then Printf.printf "attach to pid %d\n" pid;
-    check_prog_by_pid t pid;
+    if is_self pid then raise (Error (Printf.sprintf "Cannot attach to itself %d" pid));
+    check_prog_by_pid t (Pid_or_self.of_pid pid);
     if !verbose then Printf.printf "pid %d executing %s\n" pid t.elf.filename;
     match t.status with
     | Attached existing_p ->
@@ -386,7 +397,6 @@ module With_ptrace = struct
                 pid
                 existing_p.pid))
     | Not_attached ->
-      if is_self pid then raise (Error (Printf.sprintf "Cannot attach to itself %d" pid));
       stub_attach pid;
       set_status t pid
   ;;
@@ -394,13 +404,15 @@ module With_ptrace = struct
   let update ?force t ~actions =
     match t.status with
     | Not_attached -> raise (Error "update failed: no pid\n")
-    | Attached p -> update ?force t ~actions ~pid:p.pid ~mode:Mode_ptrace
+    | Attached p ->
+      update ?force t ~actions ~pid:(Pid_or_self.of_pid p.pid) ~mode:Mode_ptrace
   ;;
 
   let get_probe_states ?probe_names t =
     match t.status with
     | Not_attached -> raise (Error "cannot get probe states: no pid\n")
-    | Attached p -> get_states ?probe_names t ~pid:p.pid ~mode:Mode_ptrace
+    | Attached p ->
+      get_states ?probe_names t ~pid:(Pid_or_self.of_pid p.pid) ~mode:Mode_ptrace
   ;;
 
   (* We use PTRACE_DETACH and not PTRACE_CONT: After sending PTRACE_CONT signal
@@ -435,10 +447,10 @@ module Self = struct
   (** cannot use ptrace on itself, it will be stuck! *)
   let mode = Mode_self
 
-  let update ?force actions = update ?force t ~pid:(Unix.getpid ()) ~actions ~mode
+  let update ?force actions = update ?force t ~pid:(Pid_or_self.self ()) ~actions ~mode
 
   let get_probe_states ?probe_names () =
-    get_states ?probe_names t ~pid:(Unix.getpid ()) ~mode
+    get_states ?probe_names t ~pid:(Pid_or_self.self ()) ~mode
   ;;
 
   let get_probe_names () = get_probe_names t
@@ -504,7 +516,7 @@ let trace_existing_process ?(atomically = false) ?force t ~pid ~(actions : actio
   | false ->
     (match t.status with
      | Attached p when Int.equal p.pid pid ->
-       update ?force t ~mode:Mode_ptrace ~pid:p.pid ~actions
+       update ?force t ~mode:Mode_ptrace ~pid:(Pid_or_self.of_pid p.pid) ~actions
      | Attached _ | Not_attached ->
        (match atomically with
         | true ->
@@ -512,7 +524,7 @@ let trace_existing_process ?(atomically = false) ?force t ~pid ~(actions : actio
           P.attach t pid;
           P.update t ~actions;
           P.detach t
-        | false -> update ?force t ~mode:Mode_vm ~pid ~actions))
+        | false -> update ?force t ~mode:Mode_vm ~pid:(Pid_or_self.of_pid pid) ~actions))
 ;;
 
 let get_probe_states ?(atomically = false) t ~pid =
@@ -524,7 +536,8 @@ let get_probe_states ?(atomically = false) t ~pid =
     Self.get_probe_states ()
   | false ->
     (match t.status with
-     | Attached p when Int.equal p.pid pid -> get_states t ~mode:Mode_ptrace ~pid:p.pid
+     | Attached p when Int.equal p.pid pid ->
+       get_states t ~mode:Mode_ptrace ~pid:(Pid_or_self.of_pid p.pid)
      | Attached _ | Not_attached ->
        (match atomically with
         | true ->
@@ -533,5 +546,5 @@ let get_probe_states ?(atomically = false) t ~pid =
           let probe_states = P.get_probe_states t in
           P.detach t;
           probe_states
-        | false -> get_states t ~mode:Mode_vm ~pid))
+        | false -> get_states t ~mode:Mode_vm ~pid:(Pid_or_self.of_pid pid)))
 ;;
