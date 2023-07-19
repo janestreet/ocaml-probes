@@ -243,5 +243,5 @@ all probes named "myapp" in the current process:
 
 ```ocaml
 let actions = Probes_lib.Selected [Probes_lib.Enable, Name "myapp"] in
-Probes_lib.Self.update
+Probes_lib.Self.update actions
 ```
