@@ -24,7 +24,7 @@ type probe_desc =
   | Pair of probe_name * probe_name (** start and end probes semantics *)
   | Regex of pattern (** all probe names that match the regexp pattern *)
   | Predicate of (probe_name -> bool)
-  (** all probe names for which the predicate is true *)
+      (** all probe names for which the predicate is true *)
 
 type action =
   | Enable

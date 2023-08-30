@@ -49,7 +49,7 @@ type probe_desc =
   | Pair of probe_name * probe_name (** start and end probes semantics *)
   | Regex of pattern (** all probe names that match the regexp *)
   | Predicate of (probe_name -> bool)
-  (** all probe names for which the predicate is true *)
+      (** all probe names for which the predicate is true *)
 
 type action =
   | Enable
@@ -67,7 +67,7 @@ type t =
   { mutable status : status (** for ptrace operations *)
   ; check_prog : bool
   ; mutable allow_gigatext : bool
-  (** check that the program executed by pid is elf.filename
+      (** check that the program executed by pid is elf.filename
       before making changes to process pid  *)
   ; elf : Elf.t
   ; probe_names : probe_name array (** ordered alphabetically, no duplicates *)
@@ -145,7 +145,6 @@ module Semaphore : sig
   val incr : t -> t
   val decr : t -> t
 end = struct
-
   (** Semaphore is unsigned 2 bytes long integer value, represented as int. *)
   type t = int
 
@@ -224,16 +223,16 @@ let get_states ?probe_names t ~mode ~pid =
   let semaphores =
     Array.map
       (fun name ->
-         let probe = Elf.find_probe_note t.elf name in
-         let addresses = semaphore_addresses mmap probe in
-         read_semaphore mode pid addresses)
+        let probe = Elf.find_probe_note t.elf name in
+        let addresses = semaphore_addresses mmap probe in
+        read_semaphore mode pid addresses)
       probe_names
   in
   Array.map2
     (fun name sem ->
-       let enabled = Semaphore.is_enabled sem in
-       if !verbose then Printf.printf "%s enabled: %b\n" name enabled;
-       { name; enabled })
+      let enabled = Semaphore.is_enabled sem in
+      if !verbose then Printf.printf "%s enabled: %b\n" name enabled;
+      { name; enabled })
     probe_names
     semaphores
 ;;
@@ -295,13 +294,13 @@ module Probe_update = struct
     let mask = pagesize - 1 |> Int64.of_int |> Int64.lognot in
     List.fold_left
       (fun acc ({ address; _ } as t) ->
-         let page = Int64.(logand address mask) in
-         Map.update
-           page
-           (function
-             | Some l -> Some (t :: l)
-             | None -> Some [ t ])
-           acc)
+        let page = Int64.(logand address mask) in
+        Map.update
+          page
+          (function
+           | Some l -> Some (t :: l)
+           | None -> Some [ t ])
+          acc)
       Map.empty
       addresses
     |> Map.map Array.of_list
@@ -476,15 +475,15 @@ let trace_new_process t ~args ~actions =
         let y =
           List.filter
             (fun (action, desc) ->
-               match action with
-               | Disable ->
-                 if !verbose
-                 then
-                   Printf.printf
-                     "Ignoring -disable %s with trace: all probes start as disabled.\n"
-                     (desc_to_string t desc);
-                 false
-               | Enable -> true)
+              match action with
+              | Disable ->
+                if !verbose
+                then
+                  Printf.printf
+                    "Ignoring -disable %s with trace: all probes start as disabled.\n"
+                    (desc_to_string t desc);
+                false
+              | Enable -> true)
             x
         in
         if List.length y = 0 then raise Nothing_to_enable;

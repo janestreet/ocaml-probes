@@ -7,17 +7,17 @@ type probe_info =
   { name : string
   ; semaphores : int64 array (** address of the semaphore corresponding to the probe *)
   ; sites : int64 array
-  (** addresses of all the probe sites with the given name
+      (** addresses of all the probe sites with the given name
       and semaphore.  *)
   }
 
 type section =
   { name : string
   ; addr : int64
-  (** The address at which the section's first byte should reside in memory,
+      (** The address at which the section's first byte should reside in memory,
       or 0 for non-allocatable sections.*)
   ; offset : int64
-  (** The byte offset from the beginning of the ELF file to
+      (** The byte offset from the beginning of the ELF file to
       the first byte in the section*)
   ; size : int64
   }

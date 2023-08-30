@@ -3,7 +3,6 @@ module P = Probes_lib
 
 let set_verbose v = Probes_lib.set_verbose v
 
-
 let flag_actions =
   let to_string = function
     | P.Disable -> "disable"
@@ -16,8 +15,8 @@ let flag_actions =
     let doc = sprintf " %s all probes" s in
     flag ~full_flag_required:() name no_arg ~doc
     |> map ~f:(function
-      | true -> Some (P.All a)
-      | false -> None)
+         | true -> Some (P.All a)
+         | false -> None)
   in
   let flag_regexp a =
     let s = to_string a in
@@ -25,8 +24,8 @@ let flag_actions =
     let doc = sprintf " %s probes matching regexp" s in
     flag ~full_flag_required:() name (optional string) ~doc
     |> map ~f:(function
-      | None -> None
-      | Some s -> Some (P.Selected [ a, P.Regex (P.pattern s) ]))
+         | None -> None
+         | Some s -> Some (P.Selected [ a, P.Regex (P.pattern s) ]))
   in
   let check ~name = function
     | [] -> String.Set.empty
@@ -34,14 +33,14 @@ let flag_actions =
       List.map ~f:(String.split ~on:',') sl
       |> List.concat
       |> List.fold ~init:String.Set.empty ~f:(fun acc x ->
-        if Set.mem acc x
-        then
-          failwithf
-            "Probe name %s appears more than once as an argument of %s"
-            x
-            name
-            ();
-        Set.add acc x)
+           if Set.mem acc x
+           then
+             failwithf
+               "Probe name %s appears more than once as an argument of %s"
+               x
+               name
+               ();
+           Set.add acc x)
   in
   let flag_list a =
     let s = to_string a in
@@ -68,15 +67,15 @@ let flag_actions =
       in
       (List.concat names
        |> List.fold ~init:String.Set.empty ~f:(fun acc x ->
-         if Set.mem acc x
-         then
-           failwithf
-             "Probe name %s appears more than once as an argument of %s"
-             x
-             name
-             ();
-         Set.add acc x)
-       : String.Set.t)
+            if Set.mem acc x
+            then
+              failwithf
+                "Probe name %s appears more than once as an argument of %s"
+                x
+                name
+                ();
+            Set.add acc x)
+        : String.Set.t)
       |> ignore;
       List.map ~f:(fun (a, b) -> action, P.Pair (a, b)) pairs |> P.Selected |> Some
   in

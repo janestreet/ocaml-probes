@@ -1,16 +1,36 @@
 (* too probes with the same name, many arguments *)
 let h2 name x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 x16 x =
-  Printf.printf "handler %s:%d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d\n"
-    name x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 x16 x
+  Printf.printf
+    "handler %s:%d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d\n"
+    name
+    x0
+    x1
+    x2
+    x3
+    x4
+    x5
+    x6
+    x7
+    x8
+    x9
+    x10
+    x11
+    x12
+    x13
+    x14
+    x15
+    x16
+    x
+;;
 
 let h1 name x = Printf.printf "handler %s:%d\n" name x
 
 let test1 x =
   [%probe "a" (h1 "test1" x)];
   Printf.printf "test %d\n" x
+;;
 
-let f x n =
-  x * (Sys.opaque_identity n)
+let f x n = x * Sys.opaque_identity n
 
 let test2 x =
   let x0 = f x 0 in
@@ -32,9 +52,11 @@ let test2 x =
   let x16 = f x 16 in
   [%probe "a" (h2 "inside" x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 x16 x)];
   (* keep some of the args live after probe *)
-  (h2 "outside" x0 x1 x2 x2 x4 x4 x6 x6 x8 x8 x8 x10 x10 x12 x12 x14 x14 x);
+  h2 "outside" x0 x1 x2 x2 x4 x4 x6 x6 x8 x8 x8 x10 x10 x12 x12 x14 x14 x;
   Printf.printf "test %d\n" x
+;;
 
 let () =
-    test1 (Sys.opaque_identity 25);
-    test2 (Sys.opaque_identity 1)
+  test1 (Sys.opaque_identity 25);
+  test2 (Sys.opaque_identity 1)
+;;

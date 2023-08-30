@@ -6,16 +6,17 @@ let h b =
   print_float b;
   print_newline ();
   raise My_exn
+;;
 
 let[@inline never] foo b =
   let must_be_live = Sys.opaque_identity 2 in
-  try
-    [%probe "fooia" (h b)];
-  with My_exn -> begin
-      print_int must_be_live;
-      print_newline ()
-  end
+  try [%probe "fooia" (h b)] with
+  | My_exn ->
+    print_int must_be_live;
+    print_newline ()
+;;
 
 let () =
   foo (Float.of_int (Sys.opaque_identity 1));
   ()
+;;

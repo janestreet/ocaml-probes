@@ -12,7 +12,7 @@ type probe_info =
   { name : string
   ; semaphores : int64 array (** address of the semaphore corresponding to the probe *)
   ; sites : int64 array
-  (** addresses of all the probe sites with the given name
+      (** addresses of all the probe sites with the given name
       and semaphore.  *)
   }
 
@@ -153,13 +153,13 @@ let read_notes ~filename map sections =
   let notes = Hashtbl.create n in
   Hashtbl.iter
     (fun name { semaphores; sites } ->
-       let new_note =
-         { name
-         ; sites = sites |> Int64_set.to_seq |> Array.of_seq
-         ; semaphores = semaphores |> Int64_set.to_seq |> Array.of_seq
-         }
-       in
-       Hashtbl.add notes name new_note)
+      let new_note =
+        { name
+        ; sites = sites |> Int64_set.to_seq |> Array.of_seq
+        ; semaphores = semaphores |> Int64_set.to_seq |> Array.of_seq
+        }
+      in
+      Hashtbl.add notes name new_note)
     acc;
   notes
 ;;

@@ -6,7 +6,7 @@ let info ~pid ~bpf:_ =
   let probes = P.get_probe_states t ~pid in
   Array.iter
     (fun (p : P.probe_state) ->
-       Printf.printf "%s %s\n" p.name (if p.enabled then "enabled" else "disabled"))
+      Printf.printf "%s %s\n" p.name (if p.enabled then "enabled" else "disabled"))
     probes
 ;;
 
