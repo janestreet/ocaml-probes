@@ -1,2 +1,4 @@
-(library (name probes_lib_test) (libraries unix probes_lib)
+(library
+ (name probes_lib_test)
+ (libraries unix probes_lib)
  (preprocess no_preprocessing))

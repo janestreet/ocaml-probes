@@ -1,14 +1,27 @@
-(executables (names test_tracer) (modules test_tracer)
- (libraries probes_lib_test) (preprocess (pps ppx_jane)))
+(executables
+ (modes byte exe)
+ (names test_tracer)
+ (modules test_tracer)
+ (libraries probes_lib_test)
+ (preprocess
+  (pps ppx_jane)))
 
-(executables (names test_prog1 test_prog2) (modules test_prog1 test_prog2)
- (preprocess (pps ppx_jane)))
+(executables
+ (modes byte exe)
+ (names test_prog1 test_prog2)
+ (modules test_prog1 test_prog2)
+ (preprocess
+  (pps ppx_jane)))
 
-(rule (targets test.corrected)
+(rule
+ (targets test.corrected)
  (deps test_tracer.exe test_prog1.exe test_prog2.exe)
  (action
   (bash
-   "./test_tracer.exe test_prog1.exe test_prog2.exe | grep -v 'from prog' > %{targets}")))
+    "./test_tracer.exe test_prog1.exe test_prog2.exe | grep -v 'from prog' > %{targets}")))
 
-(alias (name runtest) (deps test.expected test.corrected)
- (action (bash "diff -u test.expected test.corrected")))
+(rule
+ (alias runtest)
+ (deps test.expected test.corrected)
+ (action
+  (bash "diff -u test.expected test.corrected")))

@@ -1,12 +1,25 @@
-(rule (targets test_no_probes.ml) (deps (:first_dep ../test.ml))
- (action (bash "cp %{first_dep} %{targets}")))
+(rule
+ (targets test_no_probes.ml)
+ (deps
+  (:first_dep ../test.ml))
+ (action
+  (bash "cp %{first_dep} %{targets}")))
 
-(rule (targets test_no_probes.output)
+(rule
+ (targets test_no_probes.output)
  (deps ../../test_attach.exe test_no_probes.exe)
- (action (bash "../../test_attach.exe test_no_probes.exe > %{targets}")))
+ (action
+  (bash "../../test_attach.exe test_no_probes.exe > %{targets}")))
 
-(alias (name runtest) (deps ../test_no_probes.expected test_no_probes.output)
- (action (bash "diff -u ../test_no_probes.expected test_no_probes.output")))
+(rule
+ (alias runtest)
+ (deps ../test_no_probes.expected test_no_probes.output)
+ (action
+  (bash "diff -u ../test_no_probes.expected test_no_probes.output")))
 
-(executables (names test_no_probes) (ocamlopt_flags :standard -no-probes)
- (preprocess (pps ppx_jane)))
+(executables
+ (modes byte exe)
+ (names test_no_probes)
+ (ocamlopt_flags :standard -no-probes)
+ (preprocess
+  (pps ppx_jane)))
