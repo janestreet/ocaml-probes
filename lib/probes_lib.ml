@@ -32,6 +32,15 @@ external stub_write_semaphore
 
 external stub_read_semaphore : mode -> pid -> int64 -> int = "probes_lib_read_semaphore"
 
+let replace_ptrace_with_vm mode =
+  match mode with
+  | Mode_ptrace -> Mode_vm
+  | Mode_self | Mode_vm -> mode
+;;
+
+let stub_write_semaphore mode = stub_write_semaphore (replace_ptrace_with_vm mode)
+let stub_read_semaphore mode = stub_read_semaphore (replace_ptrace_with_vm mode)
+
 type probe_state =
   { name : probe_name
   ; enabled : bool
