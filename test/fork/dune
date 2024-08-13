@@ -1,7 +1,7 @@
 (executables
  (modes byte exe)
  (names control_child child_self dead_parent)
- (libraries probes_lib_test)
+ (libraries probes_lib probes_lib_test unix)
  (preprocess
   (pps ppx_jane)))
 

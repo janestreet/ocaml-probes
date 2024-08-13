@@ -32,13 +32,13 @@ let test prog =
   P.trace_existing_process ~atomically:true t ~actions:(P.All P.Enable) ~pid;
   P.get_probe_states ~atomically:true t ~pid
   |> Array.iter (fun (p : Probes_lib.probe_state) ->
-       Printf.printf "%s %s\n" p.name (if p.enabled then "enabled" else "disabled"));
+    Printf.printf "%s %s\n" p.name (if p.enabled then "enabled" else "disabled"));
   P.trace_existing_process ~atomically:true t ~actions:(P.All P.Disable) ~pid;
   (* set atomically false *)
   P.trace_existing_process ~atomically:false t ~actions:(P.All P.Enable) ~pid;
   P.get_probe_states t ~atomically:false ~pid
   |> Array.iter (fun (p : Probes_lib.probe_state) ->
-       Printf.printf "%s %s\n" p.name (if p.enabled then "enabled" else "disabled"));
+    Printf.printf "%s %s\n" p.name (if p.enabled then "enabled" else "disabled"));
   P.trace_existing_process ~atomically:false t ~actions:(P.All P.Disable) ~pid;
   try
     Unix.kill pid Sys.sigkill;

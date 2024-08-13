@@ -21,7 +21,7 @@ let () =
          all pending handlers. There is currently no public interface for
          [caml_process_pending_actions].  *)
       let cur = Unix.sigprocmask Unix.SIG_SETMASK prev in
-      let (_ : int list) = Unix.sigprocmask Unix.SIG_SETMASK cur in
+      let _ : int list = Unix.sigprocmask Unix.SIG_SETMASK cur in
       ()
     done;
     boo ();

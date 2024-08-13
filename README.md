@@ -216,7 +216,7 @@ with all probes enabled from the start:
 ```ocaml
 let trace ~prog ~args =
   let actions = Probes_lib.All Probes_lib.Enable in
-  let t = P.create ~prog ~check_prog:false  in
+  let t = P.create ~prog in
   let pid = Probes_lib.With_ptrace.start t ~args in
   Probes_lib.With_ptrace.update t ~actions;
   Probes_lib.With_ptrace.detach t;

@@ -12,7 +12,7 @@ type probe_info =
   { name : string
   ; semaphores : int64 array (** address of the semaphore corresponding to the probe *)
   ; sites : int64 array
-      (** addresses of all the probe sites with the given name
+  (** addresses of all the probe sites with the given name
       and semaphore.  *)
   }
 

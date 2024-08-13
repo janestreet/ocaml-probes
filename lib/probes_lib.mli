@@ -24,7 +24,7 @@ type probe_desc =
   | Pair of probe_name * probe_name (** start and end probes semantics *)
   | Regex of pattern (** all probe names that match the regexp pattern *)
   | Predicate of (probe_name -> bool)
-      (** all probe names for which the predicate is true *)
+  (** all probe names for which the predicate is true *)
 
 type action =
   | Enable
@@ -39,15 +39,11 @@ type actions =
     binary, so can be slow for large binaries. Does not require the program
     to be running.
 
-    [check_prog] is false by default. If [check_prog] is true,
-    any changes to a running process by pid will be guarded by a check
-    that the program executed by pid is [prog].
-
     [allow_gigatext] is false by default. If [allow_gigatext] is true,
     probe operations will be allowed even if [prog] maps its [.text]
     segment onto a 1GB hugepage, resulting in a 1GB copy-on-write
     and corresponding additional memory usage upon the first update. *)
-val create : ?check_prog:bool -> ?allow_gigatext:bool -> prog:string -> unit -> t
+val create : ?allow_gigatext:bool -> prog:string -> unit -> t
 
 (** Returns the names of probes available in the program associated with [t].
     The array is sorted and containts no duplicates. *)

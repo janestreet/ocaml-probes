@@ -2,11 +2,11 @@
 
 let rec h x y z n =
   Printf.printf "h: %d %f %s\n" x y z;
-  let len = if x < 0 || x > Sys.max_array_length / 40 then 10000 else 0 in
+  let len = if x < 0 || x > 0xFFFF_FFFF then 10000 else 0 in
   let arr = Array.make len y in
   let total = Array.fold_right (fun v acc -> v +. acc) arr 0. in
   if n = 0 then Gc.full_major () else h x y z (n - 1);
-  Printf.printf "total = %f" total;
+  Printf.printf "total = %f\n" total;
   ()
 ;;
 

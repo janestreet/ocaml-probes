@@ -1,6 +1,6 @@
 (executables
  (modes byte exe)
  (names test_trace test_attach)
- (libraries probes_lib_test)
+ (libraries probes_lib probes_lib_test unix)
  (preprocess
   (pps ppx_jane)))

@@ -16,7 +16,7 @@ let () =
     while not !ready do
       Unix.sigsuspend prev;
       let cur = Unix.sigprocmask Unix.SIG_SETMASK prev in
-      let (_ : int list) = Unix.sigprocmask Unix.SIG_SETMASK cur in
+      let _ : int list = Unix.sigprocmask Unix.SIG_SETMASK cur in
       ()
     done;
     boo ();

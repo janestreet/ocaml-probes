@@ -15,7 +15,6 @@ type mode =
   | Mode_ptrace
   | Mode_vm
 
-external stub_realpath : string -> string = "probes_lib_realpath"
 external stub_start_ptrace : argv:string array -> pid = "probes_lib_start_ptrace"
 external stub_attach : pid -> unit = "probes_lib_attach"
 external stub_detach : pid -> unit = "probes_lib_detach"
@@ -58,7 +57,7 @@ type probe_desc =
   | Pair of probe_name * probe_name (** start and end probes semantics *)
   | Regex of pattern (** all probe names that match the regexp *)
   | Predicate of (probe_name -> bool)
-      (** all probe names for which the predicate is true *)
+  (** all probe names for which the predicate is true *)
 
 type action =
   | Enable
@@ -74,9 +73,8 @@ type status =
 
 type t =
   { mutable status : status (** for ptrace operations *)
-  ; check_prog : bool
   ; mutable allow_gigatext : bool
-      (** check that the program executed by pid is elf.filename
+  (** check that the program executed by pid is elf.filename
       before making changes to process pid  *)
   ; elf : Elf.t
   ; probe_names : probe_name array (** ordered alphabetically, no duplicates *)
@@ -103,34 +101,13 @@ let desc_to_string t probe_desc =
 
 let get_exe pid = Pid_or_self.of_pid pid |> Pid_or_self.get_exe
 
-let check_prog t prog =
-  if t.check_prog
-  then
-    if not (String.equal prog t.elf.filename)
-    then
-      raise
-        (Error
-           (Printf.sprintf
-              "Start: prog is %s but probe notes come from %s\n"
-              prog
-              t.elf.filename))
-;;
-
-let check_prog_by_pid t pid =
-  if t.check_prog
-  then (
-    let exe = Pid_or_self.get_exe pid in
-    check_prog t exe)
-;;
-
 let (_ : unit) =
   Callback.register_exception "probes_lib_stub_exception" (Error "any string")
 ;;
 
-let create ?(check_prog = false) ?(allow_gigatext = false) ~prog () =
-  let filename = stub_realpath prog in
-  if !verbose then Printf.printf "create: read probe notes from %s\n" filename;
-  let elf = Elf.create ~filename in
+let create ?(allow_gigatext = false) ~prog () =
+  if !verbose then Printf.printf "create: read probe notes from %s\n" prog;
+  let elf = Elf.create ~filename:prog in
   let probe_names = Hashtbl.to_seq_keys elf.probes |> Array.of_seq in
   Array.fast_sort String.compare probe_names;
   if !verbose
@@ -138,7 +115,7 @@ let create ?(check_prog = false) ?(allow_gigatext = false) ~prog () =
     if Array.length probe_names = 0
     then Printf.printf "No probes found in %s\n" prog
     else Array.iteri (fun i name -> Printf.printf "%d:%s\n" i name) probe_names;
-  { probe_names; elf; status = Not_attached; check_prog; allow_gigatext }
+  { probe_names; elf; status = Not_attached; allow_gigatext }
 ;;
 
 let is_self pid = Int.equal pid (Unix.getpid ())
@@ -307,8 +284,8 @@ module Probe_update = struct
         Map.update
           page
           (function
-           | Some l -> Some (t :: l)
-           | None -> Some [ t ])
+            | Some l -> Some (t :: l)
+            | None -> Some [ t ])
           acc)
       Map.empty
       addresses
@@ -334,7 +311,6 @@ end
 
 let update ?force t ~pid ~actions ~mode =
   (* We may have forked, so re-check maps whenever we update probes. *)
-  check_prog_by_pid t pid;
   let mmap = Mmap.read ~pid t.elf in
   let pagesize = stub_sysconf_pagesize () in
   let f name action = Probe_update.one ?force t ~action ~name ~pid ~mode ~mmap in
@@ -376,7 +352,6 @@ module With_ptrace = struct
       Printf.printf "start";
       Array.iter (fun s -> Printf.printf " %s" s) argv;
       Printf.printf "\n");
-    check_prog t prog;
     match t.status with
     | Attached existing_p ->
       raise
@@ -391,7 +366,6 @@ module With_ptrace = struct
   let attach t pid =
     if !verbose then Printf.printf "attach to pid %d\n" pid;
     if is_self pid then raise (Error (Printf.sprintf "Cannot attach to itself %d" pid));
-    check_prog_by_pid t (Pid_or_self.of_pid pid);
     if !verbose then Printf.printf "pid %d executing %s\n" pid t.elf.filename;
     match t.status with
     | Attached existing_p ->
@@ -448,8 +422,7 @@ module Raw_ptrace = struct
 end
 
 module Self = struct
-  let prog = Sys.executable_name
-  let t = create ~prog ~check_prog:false ~allow_gigatext:false ()
+  let t = create ~prog:"/proc/self/exe" ~allow_gigatext:false ()
   let set_allow_gigatext b = set_allow_gigatext t b
 
   (** cannot use ptrace on itself, it will be stuck! *)
@@ -519,7 +492,6 @@ let trace_existing_process ?(atomically = false) ?force t ~pid ~(actions : actio
   | true ->
     if atomically
     then raise (Error "trace_existing_process: cannot trace 'self' process atomically ");
-    check_prog t Self.prog;
     Self.update ?force actions
   | false ->
     (match t.status with
@@ -540,7 +512,6 @@ let get_probe_states ?(atomically = false) t ~pid =
   | true ->
     if atomically
     then raise (Error "get_probe_states: cannot trace 'self' process atomically ");
-    check_prog t Self.prog;
     Self.get_probe_states ()
   | false ->
     (match t.status with

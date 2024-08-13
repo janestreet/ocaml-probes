@@ -29,7 +29,7 @@ let attach_test_lib t ~pid ~enable =
 
 let trace_test_lib ~prog ~args =
   let actions = P.All P.Enable in
-  let t = P.create ~prog ~check_prog:false ~allow_gigatext:false () in
+  let t = P.create ~prog ~allow_gigatext:false () in
   let pid = PT.start t ~args in
   PT.update t ~actions;
   PT.detach t;
@@ -37,7 +37,7 @@ let trace_test_lib ~prog ~args =
 ;;
 
 let trace_test_lib_actions ~prog ~args ~actions =
-  let t = P.create ~prog ~check_prog:false ~allow_gigatext:false () in
+  let t = P.create ~prog ~allow_gigatext:false () in
   let pid = PT.start t ~args in
   (* All probes are disabled initially,
      only enable actions matter at start. *)

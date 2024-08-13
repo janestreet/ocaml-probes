@@ -1,3 +1,5 @@
+#undef Hide_upstream_size_macros
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <setjmp.h>
@@ -539,18 +541,6 @@ CAMLprim value probes_lib_set_verbose(value v_bool)
 {
   verbose = Bool_val(v_bool);
   return Val_unit;
-}
-
-CAMLprim value probes_lib_realpath(value v_filename)
-{
-  CAMLparam1(v_filename);
-  const char *filename = String_val(v_filename);
-  char *res = realpath(filename, NULL);
-  if (res == NULL)
-    raise_error ("could not get realpath of %s\n", filename);
-  value v_res = caml_copy_string(res);
-  free(res);
-  CAMLreturn(v_res);
 }
 
 CAMLprim value probes_lib_sysconf_pagesize(value v_unit)

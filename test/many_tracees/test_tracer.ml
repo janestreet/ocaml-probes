@@ -11,7 +11,7 @@ type t =
   }
 
 let trace prog actions =
-  let pt = P.create ~prog ~check_prog:false ~allow_gigatext:false () in
+  let pt = P.create ~prog ~allow_gigatext:false () in
   let pid = P.trace_new_process pt ~args:[] ~actions in
   let names = P.get_probe_names pt in
   Array.iteri (fun i name -> Printf.printf "%d:%s\n" i name) names;

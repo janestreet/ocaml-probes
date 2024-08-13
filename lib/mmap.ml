@@ -20,7 +20,7 @@ module Pid_or_self = struct
     | Other pid -> Printf.sprintf "/proc/%d/%s" pid filename
   ;;
 
-  let get_exe t = proc_path ~filename:"exe" t |> Unix.readlink
+  let get_exe t = proc_path ~filename:"exe" t
 
   let to_pid = function
     | Self pid | Other pid -> pid
