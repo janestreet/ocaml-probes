@@ -26,7 +26,9 @@ type section =
     to find the dynamic addresses of probe sites and semaphores *)
 type t =
   { filename : string
-  ; pie : bool (** is this a position independent executable? *)
+  ; inode : int
+  ; shared_object : bool
+  (** is this a shared object or position-independent executable? *)
   ; probes : (string, probe_info) Hashtbl.t
   ; text_section : section
   ; data_section : section
