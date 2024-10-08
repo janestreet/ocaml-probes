@@ -419,8 +419,16 @@ module Raw_ptrace = struct
 end
 
 module Self = struct
-  let t = create ~prog:"/proc/self/exe" ~allow_gigatext:false ()
-  let set_allow_gigatext b = t.allow_gigatext <- b
+  let t = lazy (create ~prog:"/proc/self/exe" ~allow_gigatext:false ())
+
+  (* force [t] so we create the probes immediately (could be expensive), but prevent an
+     exception from escaping; it will be re-raised on all future calls to [force t]. *)
+  let () =
+    try ignore (Lazy.force t : t) with
+    | _ -> ()
+  ;;
+
+  let set_allow_gigatext b = (Lazy.force t).allow_gigatext <- b
 
   (** cannot use ptrace on itself, it will be stuck! *)
   let mode = Mode_self
@@ -435,13 +443,15 @@ module Self = struct
     ;;
   end
 
-  let update ?force actions = update ?force t ~pid:(Pid_or_self.self ()) ~actions ~mode
-
-  let get_probe_states ?probe_names () =
-    get_states ?probe_names t ~pid:(Pid_or_self.self ()) ~mode
+  let update ?force actions =
+    update ?force (Lazy.force t) ~pid:(Pid_or_self.self ()) ~actions ~mode
   ;;
 
-  let get_probe_names () = get_probe_names t
+  let get_probe_states ?probe_names () =
+    get_states ?probe_names (Lazy.force t) ~pid:(Pid_or_self.self ()) ~mode
+  ;;
+
+  let get_probe_names () = get_probe_names (Lazy.force t)
 end
 
 exception Nothing_to_enable
