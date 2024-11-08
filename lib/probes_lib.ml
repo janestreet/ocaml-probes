@@ -19,7 +19,6 @@ external stub_start_ptrace : argv:string array -> pid = "probes_lib_start_ptrace
 external stub_attach : pid -> unit = "probes_lib_attach"
 external stub_detach : pid -> unit = "probes_lib_detach"
 external stub_set_verbose : bool -> unit = "probes_lib_set_verbose"
-external stub_sysconf_pagesize : unit -> int = "probes_lib_sysconf_pagesize"
 
 external stub_write_semaphore
   :  mode
@@ -88,8 +87,6 @@ let set_verbose b =
   Mmap.verbose := b;
   ()
 ;;
-
-let set_allow_gigatext t b = t.allow_gigatext <- b
 
 let desc_to_string t probe_desc =
   match probe_desc with
@@ -180,12 +177,12 @@ end
 let opcode_address addr ~offset = Int64.add (Int64.add addr offset) (* skip NOP byte *) 1L
 
 let probe_sites (mmap : Mmap.t) (probe : Elf.probe_info) =
-  let offset = mmap.vma_offset_text in
+  let offset = Mmap.vma_offset_text mmap in
   Array.map (fun address -> opcode_address address ~offset) probe.sites
 ;;
 
 let semaphore_addresses (mmap : Mmap.t) (probe : Elf.probe_info) =
-  let offset = mmap.vma_offset_semaphores in
+  let offset = Mmap.vma_offset_semaphores mmap in
   Array.map (Int64.add offset) probe.semaphores
 ;;
 
@@ -312,7 +309,7 @@ end
 let update ?force t ~pid ~actions ~mode =
   (* We may have forked, so re-check maps whenever we update probes. *)
   let mmap = Mmap.read ~pid t.elf in
-  let pagesize = stub_sysconf_pagesize () in
+  let pagesize = Mmap.pagesize_in_bytes mmap ~allow_gigatext:t.allow_gigatext in
   let f name action = Probe_update.one ?force t ~action ~name ~pid ~mode ~mmap in
   let update_from_desc (action, desc) =
     let f name = f name action in
@@ -422,19 +419,39 @@ module Raw_ptrace = struct
 end
 
 module Self = struct
-  let t = create ~prog:"/proc/self/exe" ~allow_gigatext:false ()
-  let set_allow_gigatext b = set_allow_gigatext t b
+  let t = lazy (create ~prog:"/proc/self/exe" ~allow_gigatext:false ())
+
+  (* force [t] so we create the probes immediately (could be expensive), but prevent an
+     exception from escaping; it will be re-raised on all future calls to [force t]. *)
+  let () =
+    try ignore (Lazy.force t : t) with
+    | _ -> ()
+  ;;
+
+  let set_allow_gigatext b = (Lazy.force t).allow_gigatext <- b
 
   (** cannot use ptrace on itself, it will be stuck! *)
   let mode = Mode_self
 
-  let update ?force actions = update ?force t ~pid:(Pid_or_self.self ()) ~actions ~mode
+  module Dynlink = struct
+    let update ?force t actions =
+      update ?force t ~pid:(Pid_or_self.self ()) ~actions ~mode
+    ;;
 
-  let get_probe_states ?probe_names () =
-    get_states ?probe_names t ~pid:(Pid_or_self.self ()) ~mode
+    let get_probe_states ?probe_names t =
+      get_states ?probe_names t ~pid:(Pid_or_self.self ()) ~mode
+    ;;
+  end
+
+  let update ?force actions =
+    update ?force (Lazy.force t) ~pid:(Pid_or_self.self ()) ~actions ~mode
   ;;
 
-  let get_probe_names () = get_probe_names t
+  let get_probe_states ?probe_names () =
+    get_states ?probe_names (Lazy.force t) ~pid:(Pid_or_self.self ()) ~mode
+  ;;
+
+  let get_probe_names () = get_probe_names (Lazy.force t)
 end
 
 exception Nothing_to_enable

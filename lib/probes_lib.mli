@@ -103,15 +103,21 @@ val get_exe : pid -> string
 (** Control debug printing. *)
 val set_verbose : bool -> unit
 
-(** Control gigatext policy: see [create]. *)
-val set_allow_gigatext : t -> bool -> unit
-
 (** Get and update the state of probes in the same process. Not atomic.  *)
 module Self : sig
   val update : ?force:bool -> actions -> unit
   val get_probe_states : ?probe_names:probe_name array -> unit -> probe_state array
   val get_probe_names : unit -> probe_name array
+
+  (** Control gigatext policy: see [create]. *)
   val set_allow_gigatext : bool -> unit
+
+  (** Use [Dynlink] module to get and update probes from an object file [t] dynamically
+      linked into the same process.  *)
+  module Dynlink : sig
+    val update : ?force:bool -> t -> actions -> unit
+    val get_probe_states : ?probe_names:probe_name array -> t -> probe_state array
+  end
 end
 
 (** For expert use only.

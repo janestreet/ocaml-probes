@@ -18,7 +18,9 @@ type probe_info =
 
 type t =
   { filename : string
-  ; pie : bool (** is this a position independent executable? *)
+  ; inode : int
+  ; shared_object : bool
+  (** is this a shared object or position-independent executable? *)
   ; probes : (string, probe_info) Hashtbl.t
   ; text_section : section
   ; data_section : section
@@ -166,12 +168,18 @@ let read_notes ~filename map sections =
 
 let create ~filename =
   let fd = Unix.openfile filename [ Unix.O_RDONLY ] 0 in
-  let len = Unix.lseek fd 0 Unix.SEEK_END in
-  let map =
-    Bigarray.array1_of_genarray
-      (Unix.map_file fd Bigarray.int8_unsigned Bigarray.c_layout false [| len |])
+  let inode, map =
+    Fun.protect
+      ~finally:(fun () -> Unix.close fd)
+      (fun () ->
+        let inode = (Unix.fstat fd).st_ino in
+        let len = Unix.lseek fd 0 Unix.SEEK_END in
+        let map =
+          Bigarray.array1_of_genarray
+            (Unix.map_file fd Bigarray.int8_unsigned Bigarray.c_layout false [| len |])
+        in
+        inode, map)
   in
-  Unix.close fd;
   let header, sections = Owee_elf.read_elf map in
   let find_section_exn name =
     match Owee_elf.find_section sections name with
@@ -181,7 +189,8 @@ let create ~filename =
            (Printf.sprintf "Cannot find ELF section %s in %s\n" name filename))
     | Some s -> mk_section s
   in
-  let is_pie = function
+  let shared_object =
+    match header.e_type with
     | 2 (* ET_EXEC 2 Executable file *) -> false
     | 3 (* ET_DYN 3 Shared object file *) -> true
     | e_type ->
@@ -189,10 +198,10 @@ let create ~filename =
         (Invalid_format
            (Printf.sprintf "unexpected type %d of elf executable %s\n" e_type filename))
   in
-  if !verbose
-  then Printf.printf "header.e_type=%d pie=%b\n" header.e_type (is_pie header.e_type);
+  if !verbose then Printf.printf "header.e_type=%d pie=%b\n" header.e_type shared_object;
   { filename
-  ; pie = is_pie header.e_type
+  ; inode
+  ; shared_object
   ; probes = read_notes ~filename map sections
   ; text_section = find_section_exn ".text"
   ; data_section = find_section_exn ".data"
