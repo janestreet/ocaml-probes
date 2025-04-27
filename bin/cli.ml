@@ -145,6 +145,10 @@ let flag_q =
   Command.Param.(flag "-quiet" ~aliases:[ "-q" ] no_arg ~doc:" don't print anything")
 ;;
 
+let flag_force =
+  Command.Param.(flag "-force" ~aliases:[ "-f" ] no_arg ~doc:" force probe update")
+;;
+
 let flag_prog =
   Command.Param.(
     flag
@@ -167,10 +171,11 @@ let attach_command =
       and pid = flag_pid
       (* and bpf = flag_bpf *)
       and actions = flag_actions
+      and force = flag_force
       and allow_gigatext = flag_gt in
       if v then set_verbose true;
       if q then set_verbose false;
-      fun () -> Main.attach ~pid ~bpf ~actions ~allow_gigatext)
+      fun () -> Main.attach ~pid ~bpf ~actions ~force ~allow_gigatext)
 ;;
 
 let info_command =
