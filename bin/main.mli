@@ -2,6 +2,7 @@ val attach
   :  pid:int
   -> bpf:bool
   -> actions:Probes_lib.actions
+  -> force:bool
   -> allow_gigatext:bool
   -> unit
 

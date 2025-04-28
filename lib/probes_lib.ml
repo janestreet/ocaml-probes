@@ -1,7 +1,9 @@
 exception Error of string
 
 let (_ : unit) =
-  Callback.register_exception "caml_probes_lib_stub_exception" (Error "any string")
+  (Callback.register_exception [@ocaml.alert "-unsafe_multidomain"])
+    "caml_probes_lib_stub_exception"
+    (Error "any string")
 ;;
 
 module Pid_or_self = Mmap.Pid_or_self
@@ -48,9 +50,8 @@ type pattern = string * Str.regexp
 
 let pattern s = s, Str.regexp s
 
-(** Stores the string representation of the pattern,
-    because we need it for error messages, and
-    there seem to be no way to print a compiled Str.regexp as a string.  *)
+(** Stores the string representation of the pattern, because we need it for error
+    messages, and there seem to be no way to print a compiled Str.regexp as a string. *)
 type probe_desc =
   | Name of probe_name
   | Pair of probe_name * probe_name (** start and end probes semantics *)
@@ -73,8 +74,8 @@ type status =
 type t =
   { mutable status : status (** for ptrace operations *)
   ; mutable allow_gigatext : bool
-  (** check that the program executed by pid is elf.filename
-      before making changes to process pid  *)
+  (** check that the program executed by pid is elf.filename before making changes to
+      process pid *)
   ; elf : Elf.t
   ; probe_names : probe_name array (** ordered alphabetically, no duplicates *)
   }
@@ -99,7 +100,9 @@ let desc_to_string t probe_desc =
 let get_exe pid = Pid_or_self.of_pid pid |> Pid_or_self.get_exe
 
 let (_ : unit) =
-  Callback.register_exception "probes_lib_stub_exception" (Error "any string")
+  (Callback.register_exception [@ocaml.alert "-unsafe_multidomain"])
+    "probes_lib_stub_exception"
+    (Error "any string")
 ;;
 
 let create ?(allow_gigatext = false) ~prog () =

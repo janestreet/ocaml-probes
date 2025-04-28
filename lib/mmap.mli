@@ -28,10 +28,10 @@ val verbose : bool ref
 
 val pagesize_in_bytes : allow_gigatext:bool -> t -> int
 
-(** offset of the start of the ".text" section from the start of the text
-    segment in virtual memory.  *)
+(** offset of the start of the ".text" section from the start of the text segment in
+    virtual memory. *)
 val vma_offset_text : t -> int64
 
-(** offset of the start of the ".probes" section from the start of the data
-    segment in virtual memory. *)
+(** offset of the start of the ".probes" section from the start of the data segment in
+    virtual memory. *)
 val vma_offset_semaphores : t -> int64

@@ -1,5 +1,5 @@
-(** Mutable representation of OCaml probes in the traced program. Not thread safe.
-    Use with only one tracer thread. *)
+(** Mutable representation of OCaml probes in the traced program. Not thread safe. Use
+    with only one tracer thread. *)
 type t
 
 exception Error of string
@@ -16,7 +16,7 @@ type probe_state =
 
 type pattern
 
-(** Constructor for patterns from string using Str.regexp notation.  *)
+(** Constructor for patterns from string using Str.regexp notation. *)
 val pattern : string -> pattern
 
 type probe_desc =
@@ -34,19 +34,18 @@ type actions =
   | All of action (** does not require knowing the available probe names *)
   | Selected of (action * probe_desc) list
 
-(** Reads the entire elf binary [prog] and extracts probes descriptions from
-    its stapstd .notes section. Memory and time are linear in the size of the
-    binary, so can be slow for large binaries. Does not require the program
-    to be running.
+(** Reads the entire elf binary [prog] and extracts probes descriptions from its stapstd
+    .notes section. Memory and time are linear in the size of the binary, so can be slow
+    for large binaries. Does not require the program to be running.
 
-    [allow_gigatext] is false by default. If [allow_gigatext] is true,
-    probe operations will be allowed even if [prog] maps its [.text]
-    segment onto a 1GB hugepage, resulting in a 1GB copy-on-write
-    and corresponding additional memory usage upon the first update. *)
+    [allow_gigatext] is false by default. If [allow_gigatext] is true, probe operations
+    will be allowed even if [prog] maps its [.text] segment onto a 1GB hugepage, resulting
+    in a 1GB copy-on-write and corresponding additional memory usage upon the first
+    update. *)
 val create : ?allow_gigatext:bool -> prog:string -> unit -> t
 
-(** Returns the names of probes available in the program associated with [t].
-    The array is sorted and containts no duplicates. *)
+(** Returns the names of probes available in the program associated with [t]. The array is
+    sorted and containts no duplicates. *)
 val get_probe_names : t -> probe_name array
 
 (** Check which probes are enabled in the process [pid].
@@ -59,10 +58,8 @@ val get_probe_names : t -> probe_name array
     inconsistent with the counter), the corresponding entry in the result array is
     undefined.
 
-    [atomically] indicates whether the check should be
-    performed atomically using ptrace's PEEK,
-    or not atomically using process_vm_readv (default).
-*)
+    [atomically] indicates whether the check should be performed atomically using ptrace's
+    PEEK, or not atomically using process_vm_readv (default). *)
 val get_probe_states : ?atomically:bool -> t -> pid:pid -> probe_state array
 
 (** Enable and disable probes in a running process [pid] according to [actions].
@@ -79,8 +76,7 @@ val get_probe_states : ?atomically:bool -> t -> pid:pid -> probe_state array
 
     [atomically] indicates whether the update of counters should be performed atomically
     using ptrace's PEEK and POKE, or not atomically using a combination of ptrace's POKE
-    and faster process_vm_read (default).
-*)
+    and faster process_vm_read (default). *)
 val trace_existing_process
   :  ?atomically:bool
   -> ?force:bool
@@ -90,20 +86,20 @@ val trace_existing_process
   -> unit
 
 (** Execute the program with [args] and enable probes as specified in [actions], before
-    running any code that might hit a probe.  By default, all probes start as disabled
-    when the program executed directly (without tracing). Disable [actions] are ignored.
+    running any code that might hit a probe. By default, all probes start as disabled when
+    the program executed directly (without tracing). Disable [actions] are ignored.
 
     Always performed atomically using ptrace. *)
 val trace_new_process : t -> args:string list -> actions:actions -> pid
 
-(** Utility to get the name of the binary executed by process [pid]. Read
-    from /proc/pid/exe *)
+(** Utility to get the name of the binary executed by process [pid]. Read from
+    /proc/pid/exe *)
 val get_exe : pid -> string
 
 (** Control debug printing. *)
 val set_verbose : bool -> unit
 
-(** Get and update the state of probes in the same process. Not atomic.  *)
+(** Get and update the state of probes in the same process. Not atomic. *)
 module Self : sig
   val update : ?force:bool -> actions -> unit
   val get_probe_states : ?probe_names:probe_name array -> unit -> probe_state array
@@ -113,14 +109,15 @@ module Self : sig
   val set_allow_gigatext : bool -> unit
 
   (** Use [Dynlink] module to get and update probes from an object file [t] dynamically
-      linked into the same process.  *)
+      linked into the same process. *)
   module Dynlink : sig
     val update : ?force:bool -> t -> actions -> unit
     val get_probe_states : ?probe_names:probe_name array -> t -> probe_state array
   end
 end
 
-(** For expert use only.
+(** {v
+ For expert use only.
     Use [trace_existing_process ~atomically:true] and [trace_new_process] if possible,
     they do [With_ptrace] under the hood.
 
@@ -129,33 +126,30 @@ end
     get or update the state of probes:
 
     (attach . (update | get_probe_state)* . detach
-*)
+    v} *)
 module With_ptrace : sig
   (** Attach to the process with [pid], and stop it to allow probe update. *)
   val attach : t -> pid -> unit
 
   val start : t -> args:string list -> pid
 
-  (** Enable/disable probes. Raise if not attached to any process. [update]
-      writes to memory of the process that must have been already stopped by
-      [attach]. [update] does not continue process execution and can
-      be invoked more than once. Invoke [detach] to continue process execution
-      after all updates are done.
+  (** Enable/disable probes. Raise if not attached to any process. [update] writes to
+      memory of the process that must have been already stopped by [attach]. [update] does
+      not continue process execution and can be invoked more than once. Invoke [detach] to
+      continue process execution after all updates are done.
 
-      [force] see [trace_existing_process]
-  *)
+      [force] see [trace_existing_process] *)
   val update : ?force:bool -> t -> actions:actions -> unit
 
-  (** Check which probes are enabled in the current process. Raise if not
-      attached. *)
+  (** Check which probes are enabled in the current process. Raise if not attached. *)
   val get_probe_states : ?probe_names:probe_name array -> t -> probe_state array
 
   (** Let the process continue its execution and detach from it. *)
   val detach : t -> unit
 end
 
-(** These don't actually have anything to do with probes, they're just exposed versions
-    of the C stubs used to start a process paused with ptrace and then detach from it.
+(** These don't actually have anything to do with probes, they're just exposed versions of
+    the C stubs used to start a process paused with ptrace and then detach from it.
 
     The ability to start a paused process can be useful in other contexts. *)
 module Raw_ptrace : sig

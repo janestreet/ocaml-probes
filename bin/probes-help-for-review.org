@@ -1,0 +1,110 @@
+* probes.exe
+
+: Statically-defined probes for tracing native OCaml programs
+: 
+:   probes.exe SUBCOMMAND
+: 
+: === subcommands ===
+: 
+:   attach                     . Attach to a running process and enable/disable
+:                                specified probes
+:   info                       . Attach to a running process and print for each
+:                                probe whether it is enabled/disabled
+:   trace                      . Execute the program with probes enabled as
+:                                specified
+:   version                    . print version information
+:   help                       . explain a given subcommand (perhaps recursively)
+
+** version
+
+: print version information
+: 
+:   probes.exe version 
+: 
+: === flags ===
+: 
+:   [-build-info]              . print build info for this build
+:   [-version]                 . print the version of this build
+:   [-help], -?                . print this help text and exit
+
+** attach
+
+: Attach to a running process and enable/disable specified probes
+: 
+:   probes.exe attach 
+: 
+: After updating the probes, detach from the process and return,
+: letting the process continue normally.
+: 
+: === flags ===
+: 
+:   -pid int                   . process id
+:   [-disable name] ...        . disable probes specified by name (or a comma
+:                                separated list of names)
+:   [-disable-all]             . disable all probes
+:   [-disable-pair _] ...      . disable probes pair
+:   [-disable-regexp _]        . disable probes matching regexp
+:   [-enable name] ...         . enable probes specified by name (or a comma
+:                                separated list of names)
+:   [-enable-all]              . enable all probes
+:   [-enable-pair _] ...       . enable probes pair
+:   [-enable-regexp _]         . enable probes matching regexp
+:   [-force], -f               . force probe update
+:   [-gigatext]                . allow processes that map .text onto 1GB
+:                                hugepages. Modifying probe state may incur a 1GB
+:                                copy-on-write operation and additional memory
+:                                usage.
+:   [-quiet], -q               . don't print anything
+:   [-verbose], -v             . print lots of info for debug
+:   [-help], -?                . print this help text and exit
+
+** info
+
+: Attach to a running process and print for each probe whether it is enabled/disabled
+: 
+:   probes.exe info 
+: 
+: === flags ===
+: 
+:   -pid int                   . process id
+:   [-quiet], -q               . don't print anything
+:   [-verbose], -v             . print lots of info for debug
+:   [-help], -?                . print this help text and exit
+
+** trace
+
+: Execute the program with probes enabled as specified
+: 
+:   probes.exe trace 
+: 
+: Guarantees that all specified probes are enabled before the program starts.
+: Start execution of the program in a separate child process with 
+: probes enabled as specified. 
+: Then, detach from the child process and return, while the child process continues program execution normally.
+: User can call 'attach' on the running process to enable/disable probes again. 
+: The need for 'trace' command arises when tracing probes right at the program start.
+: Note that if the program invokes `exec` on the same binary,
+: the resulting process will not have any probes enabled.
+: All threads created by the program will have the same probes enabled.
+: 
+: === flags ===
+: 
+:   -prog filename             . executable with statically-defined probes
+:   [-- args]                  . pass the rest to the program
+:   [-disable name] ...        . disable probes specified by name (or a comma
+:                                separated list of names)
+:   [-disable-all]             . disable all probes
+:   [-disable-pair _] ...      . disable probes pair
+:   [-disable-regexp _]        . disable probes matching regexp
+:   [-enable name] ...         . enable probes specified by name (or a comma
+:                                separated list of names)
+:   [-enable-all]              . enable all probes
+:   [-enable-pair _] ...       . enable probes pair
+:   [-enable-regexp _]         . enable probes matching regexp
+:   [-gigatext]                . allow processes that map .text onto 1GB
+:                                hugepages. Modifying probe state may incur a 1GB
+:                                copy-on-write operation and additional memory
+:                                usage.
+:   [-quiet], -q               . don't print anything
+:   [-verbose], -v             . print lots of info for debug
+:   [-help], -?                . print this help text and exit

@@ -5,15 +5,13 @@ type section =
   ; size : int64
   }
 
-(** Currently, arguments of probes are not used by probes_lib.
-    Each site may have different arguments.
-*)
+(** Currently, arguments of probes are not used by probes_lib. Each site may have
+    different arguments. *)
 type probe_info =
   { name : string
   ; semaphores : int64 array (** address of the semaphore corresponding to the probe *)
   ; sites : int64 array
-  (** addresses of all the probe sites with the given name
-      and semaphore.  *)
+  (** addresses of all the probe sites with the given name and semaphore. *)
   }
 
 type t =

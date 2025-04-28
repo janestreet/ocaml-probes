@@ -11,7 +11,7 @@ build: [
 ]
 depends: [
   "ocaml" {>= "5.1.0"}
-  "dune" {>= "3.11.0"}
+  "dune" {>= "3.17.0"}
   "owee" {>= "0.4"}
 ]
 synopsis: "USDT probes for OCaml: command line tool"
