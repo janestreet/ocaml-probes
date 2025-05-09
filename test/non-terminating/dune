@@ -12,7 +12,7 @@
   (bash "../test_attach.exe test.exe > %{targets}")))
 
 (rule
- (alias runtest)
  (deps test.expected test.output)
  (action
-  (bash "diff -u test.expected test.output")))
+  (bash "diff -u test.expected test.output"))
+ (alias runtest))

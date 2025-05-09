@@ -508,3 +508,10 @@ CAMLprim value probes_lib_sysconf_pagesize(value v_unit) {
   long pagesize = sysconf(_SC_PAGE_SIZE);
   return Val_long(pagesize);
 }
+
+extern uintnat caml_prelinking_in_use;
+
+CAMLprim value probes_lib_is_prelinking_enabled(value v_unit) {
+  (void)v_unit;
+  return Val_bool(caml_prelinking_in_use);
+}

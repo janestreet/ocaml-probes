@@ -21,7 +21,7 @@
     "./test_tracer.exe test_prog1.exe test_prog2.exe | grep -v 'from prog' > %{targets}")))
 
 (rule
- (alias runtest)
  (deps test.expected test.corrected)
  (action
-  (bash "diff -u test.expected test.corrected")))
+  (bash "diff -u test.expected test.corrected"))
+ (alias runtest))

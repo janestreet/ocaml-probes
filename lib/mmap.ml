@@ -79,6 +79,8 @@ let in_range x (entry : Owee_linux_maps.entry) =
   entry.address_start <= x && x < entry.address_end
 ;;
 
+external is_prelinking_enabled : unit -> bool = "probes_lib_is_prelinking_enabled"
+
 (* Position independent executables and dynamically linked shared objects will offset each
    section from the address given in [Elf.t] by an arbitrary amount.  This function
    computes those offsets for .text, .data, and .probes using their respective base
@@ -94,10 +96,13 @@ let in_range x (entry : Owee_linux_maps.entry) =
    from C stubs. *)
 let read_shared_object ~maps ~numa_maps (elf : Elf.t) entries =
   let filename = elf.filename in
+  let prelinking_enabled = is_prelinking_enabled () in
   let semaphores_section =
-    match elf.semaphores_section with
-    | Some s -> s
-    | None -> raise (Failure (Printf.sprintf "No .probes section in %s" elf.filename))
+    match elf.semaphores_section, prelinking_enabled with
+    | Some s, _ -> Some s
+    | None, true -> None
+    | None, false ->
+      raise (Failure (Printf.sprintf "No .probes section in %s" elf.filename))
   in
   let is_mapped_from_file (e : Owee_linux_maps.entry) =
     not (e.inode = 0L && e.device_major = 0 && e.device_minor = 0)
@@ -150,7 +155,10 @@ let read_shared_object ~maps ~numa_maps (elf : Elf.t) entries =
         | true, false, true, false ->
           update vma_offset_text e elf.text_section;
           start_of_text_segment := Some e.address_start
-        | true, true, false, false -> update vma_offset_semaphores e semaphores_section
+        | true, true, false, false ->
+          (match semaphores_section with
+           | Some semaphores_section -> update vma_offset_semaphores e semaphores_section
+           | None -> ())
         | _ -> ()))
     entries;
   if Option.is_none !vma_offset_text
@@ -161,7 +169,7 @@ let read_shared_object ~maps ~numa_maps (elf : Elf.t) entries =
             "Unexpected format of %s: missing executable segment for %s"
             maps
             filename));
-  if Option.is_none !vma_offset_semaphores
+  if (not prelinking_enabled) && Option.is_none !vma_offset_semaphores
   then
     raise
       (Error
@@ -169,8 +177,9 @@ let read_shared_object ~maps ~numa_maps (elf : Elf.t) entries =
             "Unexpected format of %s: missing write segment for %s"
             maps
             filename));
-  { vma_offset_text = Option.get !vma_offset_text
-  ; vma_offset_semaphores = Option.get !vma_offset_semaphores
+  { vma_offset_text = (if prelinking_enabled then 0L else Option.get !vma_offset_text)
+  ; vma_offset_semaphores =
+      (if prelinking_enabled then 0L else Option.get !vma_offset_semaphores)
   ; start_of_text_segment = Option.get !start_of_text_segment
   ; numa_maps
   ; maps
