@@ -12,10 +12,10 @@
   (bash "../../test_attach.exe test_no_probes.exe > %{targets}")))
 
 (rule
- (alias runtest)
  (deps ../test_no_probes.expected test_no_probes.output)
  (action
-  (bash "diff -u ../test_no_probes.expected test_no_probes.output")))
+  (bash "diff -u ../test_no_probes.expected test_no_probes.output"))
+ (alias runtest))
 
 (executables
  (modes byte exe)

@@ -17,10 +17,10 @@
     "../test_trace.exe assorted_handlers.exe | sed 's/Bin_prefix_assorted_handlers__//' > %{targets}")))
 
 (rule
- (alias runtest)
  (deps assorted_handlers.expected assorted_handlers.output)
  (action
-  (bash "diff -u assorted_handlers.expected assorted_handlers.output")))
+  (bash "diff -u assorted_handlers.expected assorted_handlers.output"))
+ (alias runtest))
 
 (rule
  (targets backtrace_in_handler.output)
@@ -30,10 +30,10 @@
     "../test_trace.exe backtrace_in_handler.exe | sed 's/Bin_prefix_assorted_handlers__//' > %{targets}")))
 
 (rule
- (alias runtest)
  (deps backtrace_in_handler.expected backtrace_in_handler.output)
  (action
-  (bash "diff -u backtrace_in_handler.expected backtrace_in_handler.output")))
+  (bash "diff -u backtrace_in_handler.expected backtrace_in_handler.output"))
+ (alias runtest))
 
 (rule
  (targets backtrace_in_handler_loop.output)
@@ -43,11 +43,11 @@
     "../test_trace.exe backtrace_in_handler_loop.exe | sed 's/Bin_prefix_assorted_handlers__//' > %{targets}")))
 
 (rule
- (alias runtest)
  (deps backtrace_in_handler_loop.expected backtrace_in_handler_loop.output)
  (action
   (bash
-    "diff -u backtrace_in_handler_loop.expected backtrace_in_handler_loop.output")))
+    "diff -u backtrace_in_handler_loop.expected backtrace_in_handler_loop.output"))
+ (alias runtest))
 
 (rule
  (targets exception_in_handler.output)
@@ -57,10 +57,10 @@
     "../test_trace.exe exception_in_handler.exe | sed 's/Bin_prefix_assorted_handlers__//' > %{targets}")))
 
 (rule
- (alias runtest)
  (deps exception_in_handler.expected exception_in_handler.output)
  (action
-  (bash "diff -u exception_in_handler.expected exception_in_handler.output")))
+  (bash "diff -u exception_in_handler.expected exception_in_handler.output"))
+ (alias runtest))
 
 (rule
  (targets gc_in_handler.output)
@@ -70,10 +70,10 @@
     "../test_trace.exe gc_in_handler.exe | sed 's/Bin_prefix_assorted_handlers__//' > %{targets}")))
 
 (rule
- (alias runtest)
  (deps gc_in_handler.expected gc_in_handler.output)
  (action
-  (bash "diff -u gc_in_handler.expected gc_in_handler.output")))
+  (bash "diff -u gc_in_handler.expected gc_in_handler.output"))
+ (alias runtest))
 
 (rule
  (targets gc_in_handler_deep_stack.output)
@@ -83,11 +83,11 @@
     "../test_trace.exe gc_in_handler_deep_stack.exe | sed 's/Bin_prefix_assorted_handlers__//' > %{targets}")))
 
 (rule
- (alias runtest)
  (deps gc_in_handler_deep_stack.expected gc_in_handler_deep_stack.output)
  (action
   (bash
-    "diff -u gc_in_handler_deep_stack.expected gc_in_handler_deep_stack.output")))
+    "diff -u gc_in_handler_deep_stack.expected gc_in_handler_deep_stack.output"))
+ (alias runtest))
 
 (rule
  (targets many_free_vars_in_handler.output)
@@ -97,11 +97,11 @@
     "../test_trace.exe many_free_vars_in_handler.exe | sed 's/Bin_prefix_assorted_handlers__//' > %{targets}")))
 
 (rule
- (alias runtest)
  (deps many_free_vars_in_handler.expected many_free_vars_in_handler.output)
  (action
   (bash
-    "diff -u many_free_vars_in_handler.expected many_free_vars_in_handler.output")))
+    "diff -u many_free_vars_in_handler.expected many_free_vars_in_handler.output"))
+ (alias runtest))
 
 (rule
  (targets printf_in_handler.output)
@@ -111,10 +111,10 @@
     "../test_trace.exe printf_in_handler.exe | sed 's/Bin_prefix_assorted_handlers__//' > %{targets}")))
 
 (rule
- (alias runtest)
  (deps printf_in_handler.expected printf_in_handler.output)
  (action
-  (bash "diff -u printf_in_handler.expected printf_in_handler.output")))
+  (bash "diff -u printf_in_handler.expected printf_in_handler.output"))
+ (alias runtest))
 
 (rule
  (targets probe_in_handler.output)
@@ -124,10 +124,10 @@
     "../test_trace.exe probe_in_handler.exe | sed 's/Bin_prefix_assorted_handlers__//' > %{targets}")))
 
 (rule
- (alias runtest)
  (deps probe_in_handler.expected probe_in_handler.output)
  (action
-  (bash "diff -u probe_in_handler.expected probe_in_handler.output")))
+  (bash "diff -u probe_in_handler.expected probe_in_handler.output"))
+ (alias runtest))
 
 (rule
  (targets probe_is_enabled.output)
@@ -137,10 +137,10 @@
     "../test_trace.exe probe_is_enabled.exe | sed 's/Bin_prefix_assorted_handlers__//' > %{targets}")))
 
 (rule
- (alias runtest)
  (deps probe_is_enabled.expected probe_is_enabled.output)
  (action
-  (bash "diff -u probe_is_enabled.expected probe_is_enabled.output")))
+  (bash "diff -u probe_is_enabled.expected probe_is_enabled.output"))
+ (alias runtest))
 
 (rule
  (targets test.output)
@@ -150,10 +150,10 @@
     "../test_trace.exe test.exe | sed 's/Bin_prefix_assorted_handlers__//' > %{targets}")))
 
 (rule
- (alias runtest)
  (deps test.expected test.output)
  (action
-  (bash "diff -u test.expected test.output")))
+  (bash "diff -u test.expected test.output"))
+ (alias runtest))
 
 (rule
  (targets comballoc.output)
@@ -163,10 +163,10 @@
     "../test_trace.exe comballoc.exe | sed 's/Bin_prefix_assorted_handlers__//' > %{targets}")))
 
 (rule
- (alias runtest)
  (deps comballoc.expected comballoc.output)
  (action
-  (bash "diff -u comballoc.expected comballoc.output")))
+  (bash "diff -u comballoc.expected comballoc.output"))
+ (alias runtest))
 
 (rule
  (targets cond_probes.output)
@@ -176,10 +176,10 @@
     "../test_trace.exe cond_probes.exe | sed 's/Bin_prefix_assorted_handlers__//' > %{targets}")))
 
 (rule
- (alias runtest)
  (deps cond_probes.expected cond_probes.output)
  (action
-  (bash "diff -u cond_probes.expected cond_probes.output")))
+  (bash "diff -u cond_probes.expected cond_probes.output"))
+ (alias runtest))
 
 (rule
  (targets raise_in_probe.output)
@@ -189,10 +189,10 @@
     "../test_trace.exe raise_in_probe.exe | sed 's/Bin_prefix_assorted_handlers__//' > %{targets}")))
 
 (rule
- (alias runtest)
  (deps raise_in_probe.expected raise_in_probe.output)
  (action
-  (bash "diff -u raise_in_probe.expected raise_in_probe.output")))
+  (bash "diff -u raise_in_probe.expected raise_in_probe.output"))
+ (alias runtest))
 
 (rule
  (targets rec_probes.output)
@@ -202,10 +202,10 @@
     "../test_trace.exe rec_probes.exe | sed 's/Bin_prefix_assorted_handlers__//' > %{targets}")))
 
 (rule
- (alias runtest)
  (deps rec_probes.expected rec_probes.output)
  (action
-  (bash "diff -u rec_probes.expected rec_probes.output")))
+  (bash "diff -u rec_probes.expected rec_probes.output"))
+ (alias runtest))
 
 (rule
  (targets two_units.output)
@@ -215,7 +215,7 @@
     "../test_trace.exe two_units.exe | sed 's/Bin_prefix_assorted_handlers__//' > %{targets}")))
 
 (rule
- (alias runtest)
  (deps two_units.expected two_units.output)
  (action
-  (bash "diff -u two_units.expected two_units.output")))
+  (bash "diff -u two_units.expected two_units.output"))
+ (alias runtest))

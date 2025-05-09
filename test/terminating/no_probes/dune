@@ -13,12 +13,12 @@
     "../../test_trace.exe assorted_handlers_no_probes.exe | sed 's/Bin_prefix_assorted_handlers_no_probes__//' > %{targets}")))
 
 (rule
- (alias runtest)
  (deps ../assorted_handlers_no_probes.expected
    assorted_handlers_no_probes.output)
  (action
   (bash
-    "diff -u ../assorted_handlers_no_probes.expected assorted_handlers_no_probes.output")))
+    "diff -u ../assorted_handlers_no_probes.expected assorted_handlers_no_probes.output"))
+ (alias runtest))
 
 (rule
  (targets backtrace_in_handler_no_probes.ml)
@@ -35,12 +35,12 @@
     "../../test_trace.exe backtrace_in_handler_no_probes.exe | sed 's/Bin_prefix_assorted_handlers_no_probes__//' > %{targets}")))
 
 (rule
- (alias runtest)
  (deps ../backtrace_in_handler_no_probes.expected
    backtrace_in_handler_no_probes.output)
  (action
   (bash
-    "diff -u ../backtrace_in_handler_no_probes.expected backtrace_in_handler_no_probes.output")))
+    "diff -u ../backtrace_in_handler_no_probes.expected backtrace_in_handler_no_probes.output"))
+ (alias runtest))
 
 (rule
  (targets backtrace_in_handler_loop_no_probes.ml)
@@ -57,12 +57,12 @@
     "../../test_trace.exe backtrace_in_handler_loop_no_probes.exe | sed 's/Bin_prefix_assorted_handlers_no_probes__//' > %{targets}")))
 
 (rule
- (alias runtest)
  (deps ../backtrace_in_handler_loop_no_probes.expected
    backtrace_in_handler_loop_no_probes.output)
  (action
   (bash
-    "diff -u ../backtrace_in_handler_loop_no_probes.expected backtrace_in_handler_loop_no_probes.output")))
+    "diff -u ../backtrace_in_handler_loop_no_probes.expected backtrace_in_handler_loop_no_probes.output"))
+ (alias runtest))
 
 (rule
  (targets exception_in_handler_no_probes.ml)
@@ -79,12 +79,12 @@
     "../../test_trace.exe exception_in_handler_no_probes.exe | sed 's/Bin_prefix_assorted_handlers_no_probes__//' > %{targets}")))
 
 (rule
- (alias runtest)
  (deps ../exception_in_handler_no_probes.expected
    exception_in_handler_no_probes.output)
  (action
   (bash
-    "diff -u ../exception_in_handler_no_probes.expected exception_in_handler_no_probes.output")))
+    "diff -u ../exception_in_handler_no_probes.expected exception_in_handler_no_probes.output"))
+ (alias runtest))
 
 (rule
  (targets gc_in_handler_no_probes.ml)
@@ -101,11 +101,11 @@
     "../../test_trace.exe gc_in_handler_no_probes.exe | sed 's/Bin_prefix_assorted_handlers_no_probes__//' > %{targets}")))
 
 (rule
- (alias runtest)
  (deps ../gc_in_handler_no_probes.expected gc_in_handler_no_probes.output)
  (action
   (bash
-    "diff -u ../gc_in_handler_no_probes.expected gc_in_handler_no_probes.output")))
+    "diff -u ../gc_in_handler_no_probes.expected gc_in_handler_no_probes.output"))
+ (alias runtest))
 
 (rule
  (targets gc_in_handler_deep_stack_no_probes.ml)
@@ -122,12 +122,12 @@
     "../../test_trace.exe gc_in_handler_deep_stack_no_probes.exe | sed 's/Bin_prefix_assorted_handlers_no_probes__//' > %{targets}")))
 
 (rule
- (alias runtest)
  (deps ../gc_in_handler_deep_stack_no_probes.expected
    gc_in_handler_deep_stack_no_probes.output)
  (action
   (bash
-    "diff -u ../gc_in_handler_deep_stack_no_probes.expected gc_in_handler_deep_stack_no_probes.output")))
+    "diff -u ../gc_in_handler_deep_stack_no_probes.expected gc_in_handler_deep_stack_no_probes.output"))
+ (alias runtest))
 
 (rule
  (targets many_free_vars_in_handler_no_probes.ml)
@@ -144,12 +144,12 @@
     "../../test_trace.exe many_free_vars_in_handler_no_probes.exe | sed 's/Bin_prefix_assorted_handlers_no_probes__//' > %{targets}")))
 
 (rule
- (alias runtest)
  (deps ../many_free_vars_in_handler_no_probes.expected
    many_free_vars_in_handler_no_probes.output)
  (action
   (bash
-    "diff -u ../many_free_vars_in_handler_no_probes.expected many_free_vars_in_handler_no_probes.output")))
+    "diff -u ../many_free_vars_in_handler_no_probes.expected many_free_vars_in_handler_no_probes.output"))
+ (alias runtest))
 
 (rule
  (targets printf_in_handler_no_probes.ml)
@@ -166,12 +166,12 @@
     "../../test_trace.exe printf_in_handler_no_probes.exe | sed 's/Bin_prefix_assorted_handlers_no_probes__//' > %{targets}")))
 
 (rule
- (alias runtest)
  (deps ../printf_in_handler_no_probes.expected
    printf_in_handler_no_probes.output)
  (action
   (bash
-    "diff -u ../printf_in_handler_no_probes.expected printf_in_handler_no_probes.output")))
+    "diff -u ../printf_in_handler_no_probes.expected printf_in_handler_no_probes.output"))
+ (alias runtest))
 
 (rule
  (targets probe_in_handler_no_probes.ml)
@@ -188,12 +188,12 @@
     "../../test_trace.exe probe_in_handler_no_probes.exe | sed 's/Bin_prefix_assorted_handlers_no_probes__//' > %{targets}")))
 
 (rule
- (alias runtest)
  (deps ../probe_in_handler_no_probes.expected
    probe_in_handler_no_probes.output)
  (action
   (bash
-    "diff -u ../probe_in_handler_no_probes.expected probe_in_handler_no_probes.output")))
+    "diff -u ../probe_in_handler_no_probes.expected probe_in_handler_no_probes.output"))
+ (alias runtest))
 
 (rule
  (targets probe_is_enabled_no_probes.ml)
@@ -210,12 +210,12 @@
     "../../test_trace.exe probe_is_enabled_no_probes.exe | sed 's/Bin_prefix_assorted_handlers_no_probes__//' > %{targets}")))
 
 (rule
- (alias runtest)
  (deps ../probe_is_enabled_no_probes.expected
    probe_is_enabled_no_probes.output)
  (action
   (bash
-    "diff -u ../probe_is_enabled_no_probes.expected probe_is_enabled_no_probes.output")))
+    "diff -u ../probe_is_enabled_no_probes.expected probe_is_enabled_no_probes.output"))
+ (alias runtest))
 
 (rule
  (targets test_no_probes.ml)
@@ -232,10 +232,10 @@
     "../../test_trace.exe test_no_probes.exe | sed 's/Bin_prefix_assorted_handlers_no_probes__//' > %{targets}")))
 
 (rule
- (alias runtest)
  (deps ../test_no_probes.expected test_no_probes.output)
  (action
-  (bash "diff -u ../test_no_probes.expected test_no_probes.output")))
+  (bash "diff -u ../test_no_probes.expected test_no_probes.output"))
+ (alias runtest))
 
 (rule
  (targets comballoc_no_probes.ml)
@@ -252,10 +252,10 @@
     "../../test_trace.exe comballoc_no_probes.exe | sed 's/Bin_prefix_assorted_handlers_no_probes__//' > %{targets}")))
 
 (rule
- (alias runtest)
  (deps ../comballoc_no_probes.expected comballoc_no_probes.output)
  (action
-  (bash "diff -u ../comballoc_no_probes.expected comballoc_no_probes.output")))
+  (bash "diff -u ../comballoc_no_probes.expected comballoc_no_probes.output"))
+ (alias runtest))
 
 (rule
  (targets cond_probes_no_probes.ml)
@@ -272,11 +272,11 @@
     "../../test_trace.exe cond_probes_no_probes.exe | sed 's/Bin_prefix_assorted_handlers_no_probes__//' > %{targets}")))
 
 (rule
- (alias runtest)
  (deps ../cond_probes_no_probes.expected cond_probes_no_probes.output)
  (action
   (bash
-    "diff -u ../cond_probes_no_probes.expected cond_probes_no_probes.output")))
+    "diff -u ../cond_probes_no_probes.expected cond_probes_no_probes.output"))
+ (alias runtest))
 
 (rule
  (targets raise_in_probe_no_probes.ml)
@@ -293,11 +293,11 @@
     "../../test_trace.exe raise_in_probe_no_probes.exe | sed 's/Bin_prefix_assorted_handlers_no_probes__//' > %{targets}")))
 
 (rule
- (alias runtest)
  (deps ../raise_in_probe_no_probes.expected raise_in_probe_no_probes.output)
  (action
   (bash
-    "diff -u ../raise_in_probe_no_probes.expected raise_in_probe_no_probes.output")))
+    "diff -u ../raise_in_probe_no_probes.expected raise_in_probe_no_probes.output"))
+ (alias runtest))
 
 (rule
  (targets rec_probes_no_probes.ml)
@@ -314,11 +314,11 @@
     "../../test_trace.exe rec_probes_no_probes.exe | sed 's/Bin_prefix_assorted_handlers_no_probes__//' > %{targets}")))
 
 (rule
- (alias runtest)
  (deps ../rec_probes_no_probes.expected rec_probes_no_probes.output)
  (action
   (bash
-    "diff -u ../rec_probes_no_probes.expected rec_probes_no_probes.output")))
+    "diff -u ../rec_probes_no_probes.expected rec_probes_no_probes.output"))
+ (alias runtest))
 
 (rule
  (targets two_units_no_probes.ml)
@@ -352,10 +352,10 @@
     "../../test_trace.exe two_units_no_probes.exe | sed 's/Bin_prefix_assorted_handlers_no_probes__//' > %{targets}")))
 
 (rule
- (alias runtest)
  (deps ../two_units_no_probes.expected two_units_no_probes.output)
  (action
-  (bash "diff -u ../two_units_no_probes.expected two_units_no_probes.output")))
+  (bash "diff -u ../two_units_no_probes.expected two_units_no_probes.output"))
+ (alias runtest))
 
 (executables
  (modes byte exe)
