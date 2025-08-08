@@ -6,5 +6,5 @@
   (pps ppx_jane)))
 
 (alias
- (name DEFAULT)
+ (name default)
  (deps probes.ml.pp))
