@@ -1,0 +1,5 @@
+(executables
+ (modes byte exe)
+ (names enable_in_bytecode)
+ (preprocess
+  (pps ppx_jane)))
