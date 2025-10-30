@@ -44,19 +44,33 @@ module Config = struct
   type t =
     { unique_semaphore_per_name : bool
     ; separate_semaphore_for_ocaml_handlers : bool
+    ; probe_site_may_be_absent : bool
     }
 
   let versions =
-    let tbl = Hashtbl.create 2 in
-    Hashtbl.add
-      tbl
-      "ocaml"
-      { unique_semaphore_per_name = false; separate_semaphore_for_ocaml_handlers = false };
-    let t1 =
-      { unique_semaphore_per_name = true; separate_semaphore_for_ocaml_handlers = true }
+    let tbl = Hashtbl.create 3 in
+    let t =
+      { unique_semaphore_per_name = false
+      ; separate_semaphore_for_ocaml_handlers = false
+      ; probe_site_may_be_absent = false
+      }
     in
+    let t1 =
+      { unique_semaphore_per_name = true
+      ; separate_semaphore_for_ocaml_handlers = true
+      ; probe_site_may_be_absent = false
+      }
+    in
+    let t2 =
+      { unique_semaphore_per_name = true
+      ; separate_semaphore_for_ocaml_handlers = true
+      ; probe_site_may_be_absent = true
+      }
+    in
+    Hashtbl.add tbl "ocaml" t;
     Hashtbl.add tbl "ocaml.1" t1;
     Hashtbl.add tbl "ocaml_1" t1;
+    Hashtbl.add tbl "ocaml_2" t2;
     tbl
   ;;
 
@@ -115,7 +129,20 @@ let add (note : Owee_elf_notes.Stapsdt.t) ~acc ~provider ~filename =
      | None ->
        let tmp_probe_info =
          { semaphores = Int64_set.singleton semaphore
-         ; sites = Int64_set.singleton note.addr
+         ; sites =
+             (if Int64.equal note.addr 0L
+              then
+                if config.probe_site_may_be_absent
+                then Int64_set.empty
+                else
+                  raise
+                    (Invalid_format
+                       (Printf.sprintf
+                          "Unexpected probe site address 0 in elf note for probe %s in \
+                           file %s\n"
+                          note.name
+                          filename))
+              else Int64_set.singleton note.addr)
          }
        in
        Hashtbl.add acc note.name tmp_probe_info

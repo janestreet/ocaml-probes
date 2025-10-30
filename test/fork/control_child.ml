@@ -11,11 +11,9 @@ let () =
   match Unix.fork () with
   | 0 ->
     (* Child *)
-    let ready = ref false in
-    (Sys.set_signal [@ocaml.alert "-unsafe_multidomain"])
-      Sys.sigusr1
-      (Sys.Signal_handle (fun _ -> ready := true));
-    while not !ready do
+    let ready = Atomic.make false in
+    Sys.Safe.set_signal Sys.sigusr1 (Sys.Signal_handle (fun _ -> Atomic.set ready true));
+    while not (Atomic.get ready) do
       Unix.sigsuspend prev;
       let cur = Unix.sigprocmask Unix.SIG_SETMASK prev in
       let _ : int list = Unix.sigprocmask Unix.SIG_SETMASK cur in
