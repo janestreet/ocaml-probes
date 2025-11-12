@@ -12,5 +12,5 @@
    -Wno-implicit-fallthrough))
  (name probes_lib)
  (public_name ocaml-probes.probes_lib)
- (libraries unix str owee)
+ (libraries owee str unix)
  (preprocess no_preprocessing))

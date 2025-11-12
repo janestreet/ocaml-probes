@@ -1,7 +1,7 @@
 (executables
  (modes byte exe)
  (names probes)
- (libraries probes_lib core_unix.command_unix core_unix.filename_unix core)
+ (libraries core_unix.command_unix core core_unix.filename_unix probes_lib)
  (preprocess
   (pps ppx_jane)))
 

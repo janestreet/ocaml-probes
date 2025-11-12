@@ -1,0 +1,5 @@
+(library
+ (name probes_lib_test_is_enabled)
+ (libraries core expect_test_helpers_core probes_lib unix)
+ (preprocess
+  (pps ppx_jane)))
