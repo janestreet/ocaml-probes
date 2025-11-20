@@ -106,9 +106,9 @@ let add (note : Owee_elf_notes.Stapsdt.t) ~acc ~provider ~filename =
     let semaphore =
       match note.semaphore with
       | None ->
-        (* OCaml compiler will always generate a semaphore.
-           This assumption slightly simplifies the code for enabling/disabling probes,
-           and makes it slightly more efficient. *)
+        (* OCaml compiler will always generate a semaphore. This assumption slightly
+           simplifies the code for enabling/disabling probes, and makes it slightly more
+           efficient. *)
         raise
           (Invalid_format
              (Printf.sprintf
@@ -117,12 +117,11 @@ let add (note : Owee_elf_notes.Stapsdt.t) ~acc ~provider ~filename =
                 note.addr
                 filename))
       | Some s ->
-        (* The semaphore address in probe notes points to semaphore that is used
-           by SystemTap and early versions of ocaml-probes. Newer compiler version
-           allocates additional space immediately after the existing semaphore,
-           i.e., at offset 2 bytes from the semaphore address,
-           providing a separate semaphore for ocaml-probes,
-           because these two mechnisms control different handlers. *)
+        (* The semaphore address in probe notes points to semaphore that is used by
+           SystemTap and early versions of ocaml-probes. Newer compiler version allocates
+           additional space immediately after the existing semaphore, i.e., at offset 2
+           bytes from the semaphore address, providing a separate semaphore for
+           ocaml-probes, because these two mechnisms control different handlers. *)
         if config.separate_semaphore_for_ocaml_handlers then Int64.add s 2L else s
     in
     (match Hashtbl.find_opt acc note.name with
@@ -147,8 +146,8 @@ let add (note : Owee_elf_notes.Stapsdt.t) ~acc ~provider ~filename =
        in
        Hashtbl.add acc note.name tmp_probe_info
      | Some ({ semaphores; sites } as tmp_probe_info : tmp_probe_info) ->
-       (* probe name and semaphore addresses must be the same for all probe sites associated
-          with that name.   *)
+       (* probe name and semaphore addresses must be the same for all probe sites
+          associated with that name. *)
        if config.unique_semaphore_per_name && not (Int64_set.mem semaphore semaphores)
        then
          raise

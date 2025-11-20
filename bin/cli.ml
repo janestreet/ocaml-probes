@@ -79,8 +79,8 @@ let flag_actions =
     |> map ~f:(check_pairs ~name ~action:a)
   in
   let check_disjoint enable disable =
-    (* Detect when the same probe name appears twice under incompatible
-       actions Enable and Disable. *)
+    (* Detect when the same probe name appears twice under incompatible actions Enable and
+       Disable. *)
     let both = Set.inter enable disable in
     if not (Set.is_empty both)
     then

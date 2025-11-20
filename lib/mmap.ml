@@ -38,7 +38,7 @@ type t =
 let vma_offset_text t = t.vma_offset_text
 let vma_offset_semaphores t = t.vma_offset_semaphores
 
-(* The following calculation gives the dynamic address of a symbol:
+(*=The following calculation gives the dynamic address of a symbol:
    sym_dynamic_addr
    "symbol's dynamic address"
    = "segment start"
@@ -82,18 +82,17 @@ let in_range x (entry : Owee_linux_maps.entry) =
 external is_prelinking_enabled : unit -> bool = "probes_lib_is_prelinking_enabled"
 
 (* Position independent executables and dynamically linked shared objects will offset each
-   section from the address given in [Elf.t] by an arbitrary amount.  This function
+   section from the address given in [Elf.t] by an arbitrary amount. This function
    computes those offsets for .text, .data, and .probes using their respective base
    addresses and current real locations.
 
-   However, this support is limited because we do not have a robust way to
-   correlate the base .text and .data sections with the current list of sections in
-   /proc/maps - checking permissions and file paths is insufficient.
-   The paths for the text and data sections may change to something arbitrary if they
-   are remapped. Using [Unix.map_file] will add rw-x sections that can't be easily
-   distinguished from the real .data section.
-   This could be fixed by getting the addresses of caml__code_begin/caml__data_begin
-   from C stubs. *)
+   However, this support is limited because we do not have a robust way to correlate the
+   base .text and .data sections with the current list of sections in /proc/maps -
+   checking permissions and file paths is insufficient. The paths for the text and data
+   sections may change to something arbitrary if they are remapped. Using [Unix.map_file]
+   will add rw-x sections that can't be easily distinguished from the real .data section.
+   This could be fixed by getting the addresses of caml__code_begin/caml__data_begin from
+   C stubs. *)
 let read_shared_object ~maps ~numa_maps (elf : Elf.t) entries =
   let filename = elf.filename in
   let prelinking_enabled = is_prelinking_enabled () in
