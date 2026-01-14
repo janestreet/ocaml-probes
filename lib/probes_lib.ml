@@ -196,9 +196,9 @@ let read_semaphore mode pid addresses =
   stub_read_semaphore mode pid addresses.(0) |> Semaphore.create
 ;;
 
-(* Reads the value of probe semaphores in process's memory. An
-   alternative implementation (for example, if semaphores aren't in use),
-   could be to check the instruction at the probe in the text section. *)
+(* Reads the value of probe semaphores in process's memory. An alternative implementation
+   (for example, if semaphores aren't in use), could be to check the instruction at the
+   probe in the text section. *)
 let get_states ?probe_names t ~mode ~pid =
   let mmap = Mmap.read ~pid t.elf in
   let probe_names =
@@ -248,8 +248,7 @@ module Probe_update = struct
   module Map = Map.Make (Int64)
 
   let one ?(force = false) t ~action ~name ~pid ~mode ~mmap =
-    (* When mode = Mode_self, stub_read_semaphore and stub_write_semaphore
-       ignore the pid. *)
+    (* When mode = Mode_self, stub_read_semaphore and stub_write_semaphore ignore the pid. *)
     let pid = Pid_or_self.to_pid pid in
     let probe = Elf.find_probe_note t.elf name in
     let sem_addresses = semaphore_addresses mmap probe in
@@ -293,8 +292,8 @@ module Probe_update = struct
   ;;
 
   let apply ~pid ~mode ~pagesize ts =
-    (* When mode = Mode_self, stub_write_probe_sites ignores the pid,
-       except for error messages. *)
+    (* When mode = Mode_self, stub_write_probe_sites ignores the pid, except for error
+       messages. *)
     let pid = Pid_or_self.to_pid pid in
     let by_page = split_by_page ~pagesize (Array.to_list ts) in
     let write_sites mode pagestart addrs =
@@ -319,8 +318,8 @@ let update ?force t ~pid ~actions ~mode =
     match desc with
     | Name name -> [| f name |]
     | Pair (start, stop) ->
-      (* Reduce the chance of recording an unclosed event by
-         executing start when the matching stop is disabled. *)
+      (* Reduce the chance of recording an unclosed event by executing start when the
+         matching stop is disabled. *)
       (match action with
        | Enable -> [| f stop; f start |]
        | Disable -> [| f start; f stop |])
@@ -397,16 +396,14 @@ module With_ptrace = struct
       get_states ?probe_names t ~pid:(Pid_or_self.of_pid p.pid) ~mode:Mode_ptrace
   ;;
 
-  (* We use PTRACE_DETACH and not PTRACE_CONT: After sending PTRACE_CONT signal
-     to the child process, the parent needs to stop the child process again to
-     make updates to probes, and the only way to stop is to send PTRACE_ATTACH.
-     It means it is not useful to stay attached after continue, because the
-     tracer cannot do anything with the probes. An alternative is to use
-     PTRACE_SEIZE instead of PTRACE_ATTACH and then explicitly interrupt to
-     stop the process. This way the tracer can remain attached to the child.
-     (Is it required for bpf?) The advantage of detaching is that it allows
-     another tool such as gdb to attach. Only one parent can be attached at any
-     give time. *)
+  (* We use PTRACE_DETACH and not PTRACE_CONT: After sending PTRACE_CONT signal to the
+     child process, the parent needs to stop the child process again to make updates to
+     probes, and the only way to stop is to send PTRACE_ATTACH. It means it is not useful
+     to stay attached after continue, because the tracer cannot do anything with the
+     probes. An alternative is to use PTRACE_SEIZE instead of PTRACE_ATTACH and then
+     explicitly interrupt to stop the process. This way the tracer can remain attached to
+     the child. (Is it required for bpf?) The advantage of detaching is that it allows
+     another tool such as gdb to attach. Only one parent can be attached at any give time. *)
   let detach t =
     match t.status with
     | Not_attached -> raise (Error "detach failed: no pid\n")
@@ -461,8 +458,8 @@ exception Nothing_to_enable
 
 let trace_new_process t ~args ~actions =
   try
-    (* All probes are disabled initially, only enable actions matter at start.
-       Filter out disabled actions. *)
+    (* All probes are disabled initially, only enable actions matter at start. Filter out
+       disabled actions. *)
     let actions =
       match actions with
       | All Disable ->
@@ -498,9 +495,9 @@ let trace_new_process t ~args ~actions =
     pid
   with
   | Nothing_to_enable ->
-    (* Use ptrace even if there is nothing to enable because ptrace
-       waits until child is fully loaded and running if update probes
-       happens to run immediately upon the return of this function. *)
+    (* Use ptrace even if there is nothing to enable because ptrace waits until child is
+       fully loaded and running if update probes happens to run immediately upon the
+       return of this function. *)
     let module P = With_ptrace in
     let pid = P.start t ~args in
     P.detach t;

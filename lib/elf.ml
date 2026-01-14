@@ -106,9 +106,9 @@ let add (note : Owee_elf_notes.Stapsdt.t) ~acc ~provider ~filename =
     let semaphore =
       match note.semaphore with
       | None ->
-        (* OCaml compiler will always generate a semaphore.
-           This assumption slightly simplifies the code for enabling/disabling probes,
-           and makes it slightly more efficient. *)
+        (* OCaml compiler will always generate a semaphore. This assumption slightly
+           simplifies the code for enabling/disabling probes, and makes it slightly more
+           efficient. *)
         raise
           (Invalid_format
              (Printf.sprintf
@@ -117,38 +117,36 @@ let add (note : Owee_elf_notes.Stapsdt.t) ~acc ~provider ~filename =
                 note.addr
                 filename))
       | Some s ->
-        (* The semaphore address in probe notes points to semaphore that is used
-           by SystemTap and early versions of ocaml-probes. Newer compiler version
-           allocates additional space immediately after the existing semaphore,
-           i.e., at offset 2 bytes from the semaphore address,
-           providing a separate semaphore for ocaml-probes,
-           because these two mechnisms control different handlers. *)
+        (* The semaphore address in probe notes points to semaphore that is used by
+           SystemTap and early versions of ocaml-probes. Newer compiler version allocates
+           additional space immediately after the existing semaphore, i.e., at offset 2
+           bytes from the semaphore address, providing a separate semaphore for
+           ocaml-probes, because these two mechnisms control different handlers. *)
         if config.separate_semaphore_for_ocaml_handlers then Int64.add s 2L else s
+    in
+    let get_sites (note : Owee_elf_notes.Stapsdt.t) =
+      if Int64.equal note.addr 0L
+      then
+        if config.probe_site_may_be_absent
+        then Int64_set.empty
+        else
+          raise
+            (Invalid_format
+               (Printf.sprintf
+                  "Unexpected probe site address 0 in elf note for probe %s in file %s\n"
+                  note.name
+                  filename))
+      else Int64_set.singleton note.addr
     in
     (match Hashtbl.find_opt acc note.name with
      | None ->
        let tmp_probe_info =
-         { semaphores = Int64_set.singleton semaphore
-         ; sites =
-             (if Int64.equal note.addr 0L
-              then
-                if config.probe_site_may_be_absent
-                then Int64_set.empty
-                else
-                  raise
-                    (Invalid_format
-                       (Printf.sprintf
-                          "Unexpected probe site address 0 in elf note for probe %s in \
-                           file %s\n"
-                          note.name
-                          filename))
-              else Int64_set.singleton note.addr)
-         }
+         { semaphores = Int64_set.singleton semaphore; sites = get_sites note }
        in
        Hashtbl.add acc note.name tmp_probe_info
      | Some ({ semaphores; sites } as tmp_probe_info : tmp_probe_info) ->
-       (* probe name and semaphore addresses must be the same for all probe sites associated
-          with that name.   *)
+       (* probe name and semaphore addresses must be the same for all probe sites
+          associated with that name. *)
        if config.unique_semaphore_per_name && not (Int64_set.mem semaphore semaphores)
        then
          raise
@@ -165,7 +163,7 @@ let add (note : Owee_elf_notes.Stapsdt.t) ~acc ~provider ~filename =
                  (Int64_set.min_elt semaphores)));
        (* args are currently ignored *)
        (* Here we lose the order in which notes are listed in .stapsdt notes section *)
-       tmp_probe_info.sites <- Int64_set.add note.addr sites;
+       tmp_probe_info.sites <- Int64_set.union (get_sites note) sites;
        tmp_probe_info.semaphores <- Int64_set.add semaphore semaphores)
 ;;
 
