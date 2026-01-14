@@ -81,6 +81,11 @@ let in_range x (entry : Owee_linux_maps.entry) =
 
 external is_prelinking_enabled : unit -> bool = "probes_lib_is_prelinking_enabled"
 
+let print_for_debug maps =
+  In_channel.with_open_text maps (fun maps_channel ->
+    Printf.printf "%s\n\n" (In_channel.input_all maps_channel))
+;;
+
 (* Position independent executables and dynamically linked shared objects will offset each
    section from the address given in [Elf.t] by an arbitrary amount. This function
    computes those offsets for .text, .data, and .probes using their respective base
@@ -127,28 +132,29 @@ let read_shared_object ~maps ~numa_maps (elf : Elf.t) entries =
                 maps
                 filename));
       (match !p with
-       | None -> p := Some vma_offset
-       | Some prev ->
-         raise
-           (Error
-              (Printf.sprintf
-                 "Unexpected format of %s: two segments with the same permissions for %s\n\
-                  0x%Lx previously found\n\
-                  0x%Lx from 0x%Lx\n"
-                 maps
-                 filename
-                 prev
-                 vma_offset
-                 e.address_start)))
+       | None -> ()
+       | Some (prev, (prev_e : Owee_linux_maps.entry)) ->
+         if not (prev_e.offset = 0L)
+         then
+           raise
+             (Error
+                (Printf.sprintf
+                   "Unexpected format of %s: two segments with the same permissions for %s\n\
+                    0x%Lx previously found\n\
+                    0x%Lx from 0x%Lx\n"
+                   maps
+                   filename
+                   prev
+                   vma_offset
+                   e.address_start)));
+      p := Some (vma_offset, e)
   in
   let vma_offset_text = ref None in
   let vma_offset_semaphores = ref None in
   let start_of_text_segment = ref None in
   List.iter
     (fun (e : Owee_linux_maps.entry) ->
-      if is_mapped_from_file e
-         && (not (e.offset = 0L))
-         && String.equal filename e.pathname
+      if is_mapped_from_file e && String.equal filename e.pathname
       then (
         match e.perm_read, e.perm_write, e.perm_execute, e.perm_shared with
         | true, false, true, false ->
@@ -161,24 +167,27 @@ let read_shared_object ~maps ~numa_maps (elf : Elf.t) entries =
         | _ -> ()))
     entries;
   if Option.is_none !vma_offset_text
-  then
+  then (
+    print_for_debug maps;
     raise
       (Error
          (Printf.sprintf
             "Unexpected format of %s: missing executable segment for %s"
             maps
-            filename));
+            filename)));
   if (not prelinking_enabled) && Option.is_none !vma_offset_semaphores
-  then
+  then (
+    print_for_debug maps;
     raise
       (Error
          (Printf.sprintf
             "Unexpected format of %s: missing write segment for %s"
             maps
-            filename));
-  { vma_offset_text = (if prelinking_enabled then 0L else Option.get !vma_offset_text)
+            filename)));
+  { vma_offset_text =
+      (if prelinking_enabled then 0L else Option.get !vma_offset_text |> fst)
   ; vma_offset_semaphores =
-      (if prelinking_enabled then 0L else Option.get !vma_offset_semaphores)
+      (if prelinking_enabled then 0L else Option.get !vma_offset_semaphores |> fst)
   ; start_of_text_segment = Option.get !start_of_text_segment
   ; numa_maps
   ; maps
