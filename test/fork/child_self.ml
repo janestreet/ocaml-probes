@@ -16,10 +16,9 @@ let () =
     Sys.Safe.set_signal Sys.sigusr1 (Sys.Signal_handle (fun _ -> Atomic.set ready true));
     while not (Atomic.get ready) do
       Unix.sigsuspend prev;
-      (* [Unix.sigsuspend] returns when a signal is delivered but the handler may
-         still be pending. Calling [Unix.sigprocmask] guarantees to process
-         all pending handlers. There is currently no public interface for
-         [caml_process_pending_actions].  *)
+      (* [Unix.sigsuspend] returns when a signal is delivered but the handler may still be
+         pending. Calling [Unix.sigprocmask] guarantees to process all pending handlers.
+         There is currently no public interface for [caml_process_pending_actions]. *)
       let cur = Unix.sigprocmask Unix.SIG_SETMASK prev in
       let _ : int list = Unix.sigprocmask Unix.SIG_SETMASK cur in
       ()
