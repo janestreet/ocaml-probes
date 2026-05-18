@@ -39,8 +39,7 @@ let trace_test_lib ~prog ~args =
 let trace_test_lib_actions ~prog ~args ~actions =
   let t = P.create ~prog ~allow_gigatext:false () in
   let pid = PT.start t ~args in
-  (* All probes are disabled initially,
-     only enable actions matter at start. *)
+  (* All probes are disabled initially, only enable actions matter at start. *)
   (match actions with
    | P.All P.Disable -> ()
    | P.All P.Enable -> PT.update t ~actions

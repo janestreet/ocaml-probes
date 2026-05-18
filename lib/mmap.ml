@@ -67,7 +67,6 @@ let try_find_vma_offset (mmap_entry : Owee_linux_maps.entry) (elf_section : Elf.
        - elf_section.addr))
 ;;
 
-(* as part of [read] because we don't always need it. *)
 external stub_sysconf_pagesize : unit -> int = "probes_lib_sysconf_pagesize"
 
 let pagesize_in_bytes ~allow_gigatext t =

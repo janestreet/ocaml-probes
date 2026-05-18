@@ -1,5 +1,5 @@
-(* simple example: run forever, print something once, when a probe is hit for
-   the first time. *)
+(* simple example: run forever, print something once, when a probe is hit for the first
+   time. *)
 
 let p1_hit = ref false
 let p2_hit = ref false
