@@ -105,9 +105,9 @@ let (_ : unit) =
     (Error "any string")
 ;;
 
-let create ?(allow_gigatext = false) ~prog () =
+let create ?(allow_gigatext = false) ?fd ~prog () =
   if !verbose then Printf.printf "create: read probe notes from %s\n" prog;
-  let elf = Elf.create ~filename:prog in
+  let elf = Elf.create ?fd ~filename:prog () in
   let probe_names = Hashtbl.to_seq_keys elf.probes |> Array.of_seq in
   Array.fast_sort String.compare probe_names;
   if !verbose

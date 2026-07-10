@@ -189,19 +189,23 @@ let read_notes ~filename map sections =
   notes
 ;;
 
-let create ~filename =
-  let fd = Unix.openfile filename [ Unix.O_RDONLY ] 0 in
+let create ?fd ~filename () =
   let inode, map =
-    Fun.protect
-      ~finally:(fun () -> Unix.close fd)
-      (fun () ->
-        let inode = (Unix.fstat fd).st_ino in
-        let len = Unix.lseek fd 0 Unix.SEEK_END in
-        let map =
-          Bigarray.array1_of_genarray
-            (Unix.map_file fd Bigarray.int8_unsigned Bigarray.c_layout false [| len |])
-        in
-        inode, map)
+    let fd, finally =
+      match fd with
+      | Some fd -> fd, fun () -> ()
+      | None ->
+        let fd = Unix.openfile filename [ Unix.O_RDONLY ] 0 in
+        fd, fun () -> Unix.close fd
+    in
+    Fun.protect ~finally (fun () ->
+      let inode = (Unix.fstat fd).st_ino in
+      let len = Unix.lseek fd 0 Unix.SEEK_END in
+      let map =
+        Bigarray.array1_of_genarray
+          (Unix.map_file fd Bigarray.int8_unsigned Bigarray.c_layout false [| len |])
+      in
+      inode, map)
   in
   let header, sections = Owee_elf.read_elf map in
   let find_section_exn name =
