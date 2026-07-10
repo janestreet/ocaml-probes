@@ -32,8 +32,12 @@ type t =
   ; semaphores_section : section option (** semaphores live in ".probes" section *)
   }
 
-(** Read elf notes for SystemTap tracing probes from ocaml provider. *)
-val create : filename:string -> t
+(** Read elf notes for SystemTap tracing probes from ocaml provider.
+
+    If [fd] is provided, read and interpret its content as an elf file, otherwise open and
+    read the file at [filename]. The returned [t]'s [t.filename] will always be
+    [filename]. *)
+val create : ?fd:Unix.file_descr @ local -> filename:string -> unit -> t
 
 (** Return the probe info or raise if not found. *)
 val find_probe_note : t -> string -> probe_info

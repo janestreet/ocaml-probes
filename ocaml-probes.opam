@@ -15,6 +15,9 @@ depends: [
   "dune" {>= "3.17.0"}
   "owee" {>= "0.4"}
 ]
+conflicts: [
+  "oxcaml-compiler" {< "5.2.0minus39"}
+]
 synopsis: "USDT probes for OCaml: command line tool"
 description: "
 A tool for controlling user-space statically-defined tracing probes for OCaml.

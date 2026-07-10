@@ -41,8 +41,16 @@ type actions =
     [allow_gigatext] is false by default. If [allow_gigatext] is true, probe operations
     will be allowed even if [prog] maps its [.text] segment onto a 1GB hugepage, resulting
     in a 1GB copy-on-write and corresponding additional memory usage upon the first
-    update. *)
-val create : ?allow_gigatext:bool -> prog:string -> unit -> t
+    update.
+
+    If [fd] is provided, read the elf binary content from [fd] instead of opening and
+    reading [prog]. *)
+val create
+  :  ?allow_gigatext:bool
+  -> ?fd:Unix.file_descr @ local
+  -> prog:string
+  -> unit
+  -> t
 
 (** Returns the names of probes available in the program associated with [t]. The array is
     sorted and containts no duplicates. *)
