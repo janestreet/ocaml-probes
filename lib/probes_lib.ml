@@ -18,6 +18,7 @@ type mode =
   | Mode_vm
 
 external stub_start_ptrace : argv:string array -> pid = "probes_lib_start_ptrace"
+external stub_run_to_address : pid -> int64 -> unit = "probes_lib_run_to_address"
 external stub_attach : pid -> unit = "probes_lib_attach"
 external stub_detach : pid -> unit = "probes_lib_detach"
 external stub_set_verbose : bool -> unit = "probes_lib_set_verbose"
@@ -357,7 +358,16 @@ module With_ptrace = struct
         (Error
            (Printf.sprintf "Cannot start %s, already attached to %d" prog existing_p.pid))
     | Not_attached ->
+      (* A prelinked executable's OCaml code, and so its probes, live in .prelink.so files
+         that [main] loads before calling [caml_main]. Right after exec they are not
+         mapped yet, so run to [caml_main] first. No OCaml code has run by then. *)
+      let caml_main =
+        match Elf.prelinked_caml_main t.elf with
+        | Ok address -> address
+        | Error message -> raise (Error message)
+      in
       let pid = stub_start_ptrace ~argv in
+      Option.iter (stub_run_to_address pid) caml_main;
       set_status t pid;
       pid
   ;;

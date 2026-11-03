@@ -189,24 +189,26 @@ let read_notes ~filename map sections =
   notes
 ;;
 
-let create ?fd ~filename () =
-  let inode, map =
-    let fd, finally =
-      match fd with
-      | Some fd -> fd, fun () -> ()
-      | None ->
-        let fd = Unix.openfile filename [ Unix.O_RDONLY ] 0 in
-        fd, fun () -> Unix.close fd
-    in
-    Fun.protect ~finally (fun () ->
-      let inode = (Unix.fstat fd).st_ino in
-      let len = Unix.lseek fd 0 Unix.SEEK_END in
-      let map =
-        Bigarray.array1_of_genarray
-          (Unix.map_file fd Bigarray.int8_unsigned Bigarray.c_layout false [| len |])
-      in
-      inode, map)
+let map_file ?fd ~filename () =
+  let fd, finally =
+    match fd with
+    | Some fd -> fd, fun () -> ()
+    | None ->
+      let fd = Unix.openfile filename [ Unix.O_RDONLY ] 0 in
+      fd, fun () -> Unix.close fd
   in
+  Fun.protect ~finally (fun () ->
+    let inode = (Unix.fstat fd).st_ino in
+    let len = Unix.lseek fd 0 Unix.SEEK_END in
+    let map =
+      Bigarray.array1_of_genarray
+        (Unix.map_file fd Bigarray.int8_unsigned Bigarray.c_layout false [| len |])
+    in
+    inode, map)
+;;
+
+let create ?fd ~filename () =
+  let inode, map = map_file ?fd ~filename () in
   let header, sections = Owee_elf.read_elf map in
   let find_section_exn name =
     match Owee_elf.find_section sections name with
@@ -234,6 +236,38 @@ let create ?fd ~filename () =
   ; data_section = find_section_exn ".data"
   ; semaphores_section = Option.map mk_section (Owee_elf.find_section sections ".probes")
   }
+;;
+
+let prelinked_caml_main t =
+  if t.shared_object
+  then Ok None
+  else (
+    let _, map = map_file ~filename:t.filename () in
+    let _, sections = Owee_elf.read_elf map in
+    (* Prelinking exports its symbols to [.dynsym], which is much smaller than [.symtab]
+       and survives stripping. *)
+    match
+      ( Owee_elf.find_dynamic_symbol_table map sections
+      , Owee_elf.find_dynamic_string_table map sections )
+    with
+    | None, _ | _, None -> Ok None
+    | Some symtab, Some strtab ->
+      let prelinked = ref false in
+      let caml_main = ref None in
+      Owee_elf.Symbol_table.iter symtab ~f:(fun symbol ->
+        match Owee_elf.Symbol_table.Symbol.name symbol strtab with
+        | Some "prelinking_startup" -> prelinked := true
+        | Some "caml_main" ->
+          caml_main := Some (Owee_elf.Symbol_table.Symbol.value symbol)
+        | Some _ | None -> ());
+      (match !prelinked, !caml_main with
+       | false, _ -> Ok None
+       | true, Some address -> Ok (Some address)
+       | true, None ->
+         Error
+           (Printf.sprintf
+              "Cannot trace prelinked executable %s: no caml_main symbol"
+              t.filename)))
 ;;
 
 let find_probe_note t name =

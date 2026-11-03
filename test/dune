@@ -3,4 +3,4 @@
  (names test_trace test_attach)
  (libraries probes_lib probes_lib_test unix)
  (preprocess
-  (pps ppx_jane)))
+  (pps ppx_jane -compare-require-explicit-locality)))
