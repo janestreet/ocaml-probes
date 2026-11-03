@@ -139,6 +139,7 @@ module With_ptrace : sig
   (** Attach to the process with [pid], and stop it to allow probe update. *)
   val attach : t -> pid -> unit
 
+  (** Start an executable, stopped before any OCaml code runs. *)
   val start : t -> args:string list -> pid
 
   (** Enable/disable probes. Raise if not attached to any process. [update] writes to

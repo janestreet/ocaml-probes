@@ -1,5 +1,4 @@
-Tracing probes for OCaml
-========================
+# Tracing probes for OCaml
 
 Experimental mechanism for tracing OCaml native programs in user-space.
 

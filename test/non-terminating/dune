@@ -3,7 +3,7 @@
  (names test)
  (ocamlopt_flags :standard -O3)
  (preprocess
-  (pps ppx_jane)))
+  (pps ppx_jane -compare-require-explicit-locality)))
 
 (rule
  (targets test.output)

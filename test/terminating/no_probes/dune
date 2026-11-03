@@ -1,9 +1,8 @@
 (rule
  (targets assorted_handlers_no_probes.ml)
- (deps
-  (:first_dep ../assorted_handlers.ml))
+ (deps ../assorted_handlers.ml)
  (action
-  (bash "cp %{first_dep} %{targets}")))
+  (copy ../assorted_handlers.ml assorted_handlers_no_probes.ml)))
 
 (rule
  (targets assorted_handlers_no_probes.output)
@@ -22,10 +21,9 @@
 
 (rule
  (targets backtrace_in_handler_no_probes.ml)
- (deps
-  (:first_dep ../backtrace_in_handler.ml))
+ (deps ../backtrace_in_handler.ml)
  (action
-  (bash "cp %{first_dep} %{targets}")))
+  (copy ../backtrace_in_handler.ml backtrace_in_handler_no_probes.ml)))
 
 (rule
  (targets backtrace_in_handler_no_probes.output)
@@ -44,10 +42,10 @@
 
 (rule
  (targets backtrace_in_handler_loop_no_probes.ml)
- (deps
-  (:first_dep ../backtrace_in_handler_loop.ml))
+ (deps ../backtrace_in_handler_loop.ml)
  (action
-  (bash "cp %{first_dep} %{targets}")))
+  (copy ../backtrace_in_handler_loop.ml
+    backtrace_in_handler_loop_no_probes.ml)))
 
 (rule
  (targets backtrace_in_handler_loop_no_probes.output)
@@ -66,10 +64,9 @@
 
 (rule
  (targets exception_in_handler_no_probes.ml)
- (deps
-  (:first_dep ../exception_in_handler.ml))
+ (deps ../exception_in_handler.ml)
  (action
-  (bash "cp %{first_dep} %{targets}")))
+  (copy ../exception_in_handler.ml exception_in_handler_no_probes.ml)))
 
 (rule
  (targets exception_in_handler_no_probes.output)
@@ -88,10 +85,9 @@
 
 (rule
  (targets gc_in_handler_no_probes.ml)
- (deps
-  (:first_dep ../gc_in_handler.ml))
+ (deps ../gc_in_handler.ml)
  (action
-  (bash "cp %{first_dep} %{targets}")))
+  (copy ../gc_in_handler.ml gc_in_handler_no_probes.ml)))
 
 (rule
  (targets gc_in_handler_no_probes.output)
@@ -109,10 +105,9 @@
 
 (rule
  (targets gc_in_handler_deep_stack_no_probes.ml)
- (deps
-  (:first_dep ../gc_in_handler_deep_stack.ml))
+ (deps ../gc_in_handler_deep_stack.ml)
  (action
-  (bash "cp %{first_dep} %{targets}")))
+  (copy ../gc_in_handler_deep_stack.ml gc_in_handler_deep_stack_no_probes.ml)))
 
 (rule
  (targets gc_in_handler_deep_stack_no_probes.output)
@@ -131,10 +126,10 @@
 
 (rule
  (targets many_free_vars_in_handler_no_probes.ml)
- (deps
-  (:first_dep ../many_free_vars_in_handler.ml))
+ (deps ../many_free_vars_in_handler.ml)
  (action
-  (bash "cp %{first_dep} %{targets}")))
+  (copy ../many_free_vars_in_handler.ml
+    many_free_vars_in_handler_no_probes.ml)))
 
 (rule
  (targets many_free_vars_in_handler_no_probes.output)
@@ -153,10 +148,9 @@
 
 (rule
  (targets printf_in_handler_no_probes.ml)
- (deps
-  (:first_dep ../printf_in_handler.ml))
+ (deps ../printf_in_handler.ml)
  (action
-  (bash "cp %{first_dep} %{targets}")))
+  (copy ../printf_in_handler.ml printf_in_handler_no_probes.ml)))
 
 (rule
  (targets printf_in_handler_no_probes.output)
@@ -175,10 +169,9 @@
 
 (rule
  (targets probe_in_handler_no_probes.ml)
- (deps
-  (:first_dep ../probe_in_handler.ml))
+ (deps ../probe_in_handler.ml)
  (action
-  (bash "cp %{first_dep} %{targets}")))
+  (copy ../probe_in_handler.ml probe_in_handler_no_probes.ml)))
 
 (rule
  (targets probe_in_handler_no_probes.output)
@@ -197,10 +190,9 @@
 
 (rule
  (targets probe_is_enabled_no_probes.ml)
- (deps
-  (:first_dep ../probe_is_enabled.ml))
+ (deps ../probe_is_enabled.ml)
  (action
-  (bash "cp %{first_dep} %{targets}")))
+  (copy ../probe_is_enabled.ml probe_is_enabled_no_probes.ml)))
 
 (rule
  (targets probe_is_enabled_no_probes.output)
@@ -219,10 +211,9 @@
 
 (rule
  (targets test_no_probes.ml)
- (deps
-  (:first_dep ../test.ml))
+ (deps ../test.ml)
  (action
-  (bash "cp %{first_dep} %{targets}")))
+  (copy ../test.ml test_no_probes.ml)))
 
 (rule
  (targets test_no_probes.output)
@@ -239,10 +230,9 @@
 
 (rule
  (targets comballoc_no_probes.ml)
- (deps
-  (:first_dep ../comballoc.ml))
+ (deps ../comballoc.ml)
  (action
-  (bash "cp %{first_dep} %{targets}")))
+  (copy ../comballoc.ml comballoc_no_probes.ml)))
 
 (rule
  (targets comballoc_no_probes.output)
@@ -259,10 +249,9 @@
 
 (rule
  (targets cond_probes_no_probes.ml)
- (deps
-  (:first_dep ../cond_probes.ml))
+ (deps ../cond_probes.ml)
  (action
-  (bash "cp %{first_dep} %{targets}")))
+  (copy ../cond_probes.ml cond_probes_no_probes.ml)))
 
 (rule
  (targets cond_probes_no_probes.output)
@@ -280,10 +269,9 @@
 
 (rule
  (targets raise_in_probe_no_probes.ml)
- (deps
-  (:first_dep ../raise_in_probe.ml))
+ (deps ../raise_in_probe.ml)
  (action
-  (bash "cp %{first_dep} %{targets}")))
+  (copy ../raise_in_probe.ml raise_in_probe_no_probes.ml)))
 
 (rule
  (targets raise_in_probe_no_probes.output)
@@ -301,10 +289,9 @@
 
 (rule
  (targets rec_probes_no_probes.ml)
- (deps
-  (:first_dep ../rec_probes.ml))
+ (deps ../rec_probes.ml)
  (action
-  (bash "cp %{first_dep} %{targets}")))
+  (copy ../rec_probes.ml rec_probes_no_probes.ml)))
 
 (rule
  (targets rec_probes_no_probes.output)
@@ -331,18 +318,12 @@
     "cat %{first_dep} | sed 's/S./S_no_probes./g' | sed 's/T./T_no_probes./g' >  %{targets}")))
 
 (rule
- (targets t_no_probes.ml)
- (deps
-  (:first_dep ../t.ml))
+ (targets t_no_probes.ml s_no_probes.ml)
+ (deps ../t.ml ../s.ml)
  (action
-  (bash "cp %{first_dep} %{targets}")))
-
-(rule
- (targets s_no_probes.ml)
- (deps
-  (:first_dep ../s.ml))
- (action
-  (bash "cp %{first_dep} %{targets}")))
+  (progn
+   (copy ../t.ml t_no_probes.ml)
+   (copy ../s.ml s_no_probes.ml))))
 
 (rule
  (targets two_units_no_probes.output)

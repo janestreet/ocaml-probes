@@ -16,7 +16,7 @@
 
 #include <linux/ptrace.h>
 
-static inline long ptrace_traceme() { return ptrace(PTRACE_TRACEME, 0, NULL, NULL); }
+static inline long ptrace_traceme(void) { return ptrace(PTRACE_TRACEME, 0, NULL, NULL); }
 
 static inline long ptrace_attach(pid_t pid) {
   return ptrace(PTRACE_ATTACH, pid, NULL, NULL);
@@ -46,6 +46,7 @@ static inline long ptrace_set_data(pid_t pid, void *addr, void *data) {
 
 #include <sys/user.h>
 #include <sys/wait.h>
+#include <signal.h>
 
 #include <caml/fail.h>
 #include <caml/callback.h>
@@ -73,7 +74,8 @@ static inline void v_raise_error(const char *fmt, va_list argp) {
   caml_raise_with_string(*ex, buf);
 }
 
-static inline void raise_error(const char *msg, ...) {
+__attribute__((format(printf, 1, 2))) static inline void raise_error(const char *msg,
+                                                                     ...) {
   va_list args;
   va_start(args, msg);
   v_raise_error(msg, args);
@@ -82,7 +84,8 @@ static inline void raise_error(const char *msg, ...) {
 
 static bool kill_child_on_error = false;
 
-static inline void signal_and_error(pid_t cpid, const char *msg, ...) {
+__attribute__((format(printf, 2, 3))) static inline void
+signal_and_error(pid_t cpid, const char *msg, ...) {
   if (kill_child_on_error) {
     ptrace_kill(cpid);
     wait(NULL);
@@ -109,10 +112,10 @@ static inline void vm_simple(bool read, /* 1 read, 0 write */
   else
     m = process_vm_writev(cpid, local, 1, remote, 1, 0);
   if ((m == -1) || (errno != 0)) {
-    raise_error("process_vm_readv or process_vm_writev failed (pid=%d, addr=%lx:\n%s\n",
-                (strerror));
+    raise_error("process_vm_readv or process_vm_writev failed (pid=%d, addr=0x%lx): %s",
+                cpid, addr, strerror(errno));
   } else if (m != n)
-    raise_error("process_vm_%sv: done %d instead of %d byte for pid %d from %lx\n",
+    raise_error("process_vm_%sv: done %zd instead of %zd bytes for pid %d from %lx\n",
                 (read ? "read" : "write"), m, n, cpid, addr);
 }
 
@@ -233,7 +236,7 @@ static inline void mprotect_self(bool for_writing, unsigned long pagestart,
     raise_error("modify_probe in self"
                 "(self) mprotect add write prot failed at "
                 "(pagestart=%lx, pagesize=%lx) with errno %d",
-                pagestart, pagesize, write, errno);
+                pagestart, pagesize, errno);
   }
 }
 
@@ -347,7 +350,7 @@ static inline void write_opcode(mode mode, pid_t cpid, unsigned long addr, uint8
     write_opcode_self(addr, op);
     return;
   case Mode_vm:
-    raise_error("cannot vm_process_write at 0x%x: opcode\n", addr);
+    raise_error("cannot vm_process_write at 0x%lx: opcode\n", addr);
   case Mode_ptrace:
     write_opcode_ptrace(cpid, addr, op, data);
     return;
@@ -421,6 +424,81 @@ CAMLprim value probes_lib_start_ptrace(value v_argv) {
   }
   free(argv);
   CAMLreturn(Val_long(cpid));
+}
+
+/* Run the stopped tracee [cpid] until it reaches [addr], by planting a breakpoint there,
+   continuing, and restoring the original instruction once the breakpoint is hit. */
+CAMLprim value probes_lib_run_to_address(value v_pid, value v_addr) {
+  CAMLparam2(v_pid, v_addr);
+  pid_t cpid = Long_val(v_pid);
+
+#if defined(__x86_64__)
+  unsigned long addr = Int64_val(v_addr);
+
+  errno = 0;
+  long saved = ptrace(PTRACE_PEEKTEXT, cpid, (void *)addr, NULL);
+  if (errno != 0)
+    goto kill_child;
+
+  long patched = (saved & ~0xffL) | 0xcc; /* int3 */
+  if (ptrace(PTRACE_POKETEXT, cpid, (void *)addr, (void *)patched))
+    goto kill_child;
+
+  struct user_regs_struct regs;
+  int sig = 0;
+
+  /* Other signals, including unrelated SIGTRAPs, must be delivered rather than mistaken
+     for our breakpoint. No syscall or ptrace-event stops are enabled on this tracee. */
+  for (;;) {
+
+    if (ptrace(PTRACE_CONT, cpid, NULL, (void *)(long)sig))
+      goto kill_child;
+
+    int status;
+    pid_t waited;
+    do {
+      waited = waitpid(cpid, &status, 0);
+    } while (waited == -1 && errno == EINTR);
+
+    if (waited == -1 && errno != ECHILD)
+      goto kill_child;
+
+    /* On exit or ECHILD, the child has been reaped; do not signal a reused PID. */
+    if (waited == -1 || !WIFSTOPPED(status))
+      raise_error("run_to_address: failed\n");
+
+    sig = WSTOPSIG(status);
+    if (sig == SIGTRAP) {
+
+      siginfo_t info;
+      if (ptrace(PTRACE_GETREGS, cpid, NULL, &regs) ||
+          ptrace(PTRACE_GETSIGINFO, cpid, NULL, &info))
+        goto kill_child;
+
+      /* Linux x86 int3 traps can report SI_KERNEL rather than TRAP_BRKPT. */
+      if (regs.rip == addr + 1 &&
+          (info.si_code == TRAP_BRKPT || info.si_code == SI_KERNEL))
+        break;
+    }
+  }
+
+  regs.rip = addr; /* int3 leaves rip just past the breakpoint */
+  if (ptrace(PTRACE_POKETEXT, cpid, (void *)addr, (void *)saved) ||
+      ptrace(PTRACE_SETREGS, cpid, NULL, &regs))
+    goto kill_child;
+
+  CAMLreturn(Val_unit);
+
+kill_child:
+#endif
+
+  /* The caller has not received the PID yet. Kill and reap the child rather than leave
+     an untracked process stopped. */
+  kill(cpid, SIGKILL);
+  while (waitpid(cpid, NULL, 0) == -1 && errno == EINTR) {
+  }
+  raise_error("run_to_address: failed\n");
+  CAMLreturn(Val_unit);
 }
 
 CAMLprim value probes_lib_attach(value v_pid) {

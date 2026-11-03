@@ -1,9 +1,8 @@
 (rule
  (targets test_no_probes.ml)
- (deps
-  (:first_dep ../test.ml))
+ (deps ../test.ml)
  (action
-  (bash "cp %{first_dep} %{targets}")))
+  (copy ../test.ml test_no_probes.ml)))
 
 (rule
  (targets test_no_probes.output)
@@ -22,4 +21,4 @@
  (names test_no_probes)
  (ocamlopt_flags :standard -no-probes)
  (preprocess
-  (pps ppx_jane)))
+  (pps ppx_jane -compare-require-explicit-locality)))

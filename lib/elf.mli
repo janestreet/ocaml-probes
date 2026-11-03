@@ -39,6 +39,11 @@ type t =
     [filename]. *)
 val create : ?fd:Unix.file_descr @ local -> filename:string -> unit -> t
 
+(** Return the [caml_main] address for a prelinked executable, or [Ok None] for other
+    executables and shared objects. Return an error if a prelinked executable has no
+    [caml_main] symbol. *)
+val prelinked_caml_main : t -> (int64 option, string) result
+
 (** Return the probe info or raise if not found. *)
 val find_probe_note : t -> string -> probe_info
 
